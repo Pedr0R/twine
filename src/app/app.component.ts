@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, ElementRef, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -10,7 +10,10 @@ import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { RequestService, HttpRequestConfig, HttpResponse } from './core/services/request.service';
 import { HistoryService, HistoryItem } from './core/services/history.service';
 import { RequisitionService, Requisition } from './core/services/requisition.service';
+import { CollectionService, Collection, CollectionRequest, AuthConfig } from './core/services/collection.service';
 import { SaveRequisitionDialogComponent } from './components/save-requisition-dialog/save-requisition-dialog.component';
+import { CollectionDialogComponent } from './components/collection-dialog/collection-dialog.component';
+import { SaveToCollectionDialogComponent, SaveToCollectionDialogResult } from './components/save-to-collection-dialog/save-to-collection-dialog.component';
 
 interface KeyValuePair {
   key: string;
@@ -21,7 +24,10 @@ interface KeyValuePair {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatIconModule, MatSnackBarModule, MatDialogModule, MatMenuModule],
+  imports: [
+    CommonModule, FormsModule, MatTabsModule, MatIconModule,
+    MatSnackBarModule, MatDialogModule, MatMenuModule
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -58,9 +64,18 @@ export class AppComponent implements OnInit {
   // Saved Requests
   savedRequests: Requisition[] = [];
 
+  // Collections
+  collections: Collection[] = [];
+  collapsedCollections: Set<string> = new Set();
+  activeContextCollection: Collection | null = null;
+  activeContextColReq: { collection: Collection; request: CollectionRequest } | null = null;
+
   // Response
   response: HttpResponse | null = null;
   selectedItem: string = '';
+
+  // Sidebar view: 'requests' | 'collections'
+  sidebarView: 'requests' | 'collections' = 'requests';
 
   get currentRequestName(): string {
     const req = this.savedRequests.find(r => r.id === this.selectedItem);
@@ -74,8 +89,11 @@ export class AppComponent implements OnInit {
   isHistoryCollapsed: boolean = false;
 
   @ViewChild(MatMenuTrigger) contextMenuTrigger!: MatMenuTrigger;
+  @ViewChildren(MatMenuTrigger) allMenuTriggers!: QueryList<MatMenuTrigger>;
   contextMenuPosition = { x: '0px', y: '0px' };
   activeContextReq: Requisition | null = null;
+
+  @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
 
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
@@ -102,12 +120,14 @@ export class AppComponent implements OnInit {
     private historyService: HistoryService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private requisitionService: RequisitionService
+    private requisitionService: RequisitionService,
+    private collectionService: CollectionService
   ) { }
 
   ngOnInit() {
     this.loadHistory();
     this.loadRequisitions();
+    this.loadCollections();
   }
 
   loadRequisitions() {
@@ -407,6 +427,205 @@ export class AppComponent implements OnInit {
     const mockHistoryItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
     this.loadHistoryItem(mockHistoryItem);
     this.selectedItem = req.id;
+  }
+
+  // ── Collections ──────────────────────────────────────────────────────────
+
+  loadCollections() {
+    this.collections = this.collectionService.getCollections();
+  }
+
+  toggleCollection(id: string) {
+    if (this.collapsedCollections.has(id)) {
+      this.collapsedCollections.delete(id);
+    } else {
+      this.collapsedCollections.add(id);
+    }
+  }
+
+  isCollectionCollapsed(id: string): boolean {
+    return this.collapsedCollections.has(id);
+  }
+
+  openCreateCollectionDialog() {
+    const dialogRef = this.dialog.open(CollectionDialogComponent, {
+      width: '480px',
+      panelClass: 'dark-dialog-panel',
+      data: {}
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.collectionService.addCollection(result.name, result.description);
+        this.loadCollections();
+      }
+    });
+  }
+
+  saveCurrentRequestToCollection() {
+    this.updateUrlFromParams();
+    const dialogRef = this.dialog.open(SaveToCollectionDialogComponent, {
+      width: '500px',
+      panelClass: 'dark-dialog-panel',
+      data: {
+        collections: this.collections,
+        requestName: this.url ? `${this.method} ${this.url}` : ''
+      }
+    });
+    dialogRef.afterClosed().subscribe((result: SaveToCollectionDialogResult | undefined) => {
+      if (!result) return;
+
+      // Build current config snapshot
+      const finalHeaders: Record<string, string> = {};
+      this.headers.forEach(h => { if (h.enabled && h.key) finalHeaders[h.key] = h.value; });
+      const config: HttpRequestConfig = {
+        method: this.method,
+        url: this.url,
+        headers: Object.keys(finalHeaders).length ? finalHeaders : undefined,
+        body: this.bodyType !== 'Form-Data' && this.bodyContent.trim() ? this.bodyContent : undefined,
+        formDataPayload: this.bodyType === 'Form-Data'
+          ? Object.fromEntries(this.formDataFields.filter(f => f.enabled && f.key).map(f => [f.key, f.value]))
+          : undefined
+      };
+
+      // Capture current auth state
+      const auth: AuthConfig = {
+        authType: this.authType as AuthConfig['authType'],
+        authActive: this.authType !== 'none',
+        bearerToken: this.bearerToken,
+        basicUsername: this.basicUsername,
+        basicPassword: this.basicPassword,
+        apiKeyName: this.apiKeyName,
+        apiKeyValue: this.apiKeyValue,
+        apiKeyAddTo: this.apiKeyAddTo as 'header' | 'query'
+      };
+
+      let targetCollectionId = result.collectionId;
+
+      // Create new collection first if needed
+      if (result.collectionId === '__new__' && result.newCollectionName) {
+        const newCol = this.collectionService.addCollection(result.newCollectionName, '');
+        targetCollectionId = newCol.id;
+      }
+
+      this.collectionService.addRequestToCollection(
+        targetCollectionId,
+        result.requestName,
+        result.requestDescription,
+        config,
+        auth
+      );
+      this.loadCollections();
+      this.snackBar.open('Request saved to collection!', 'Close', { duration: 2500 });
+    });
+  }
+
+  loadCollectionRequest(req: CollectionRequest) {
+    const historyItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
+    this.loadHistoryItem(historyItem);
+    this.selectedItem = req.id;
+
+    // Restore auth state from collection request
+    const auth = req.auth;
+    if (auth) {
+      this.authType = auth.authType === 'inherit' ? 'none' : auth.authType;
+      this.bearerToken = auth.bearerToken ?? '';
+      this.basicUsername = auth.basicUsername ?? '';
+      this.basicPassword = auth.basicPassword ?? '';
+      this.apiKeyName = auth.apiKeyName ?? '';
+      this.apiKeyValue = auth.apiKeyValue ?? '';
+      this.apiKeyAddTo = auth.apiKeyAddTo ?? 'header';
+    } else {
+      this.authType = 'none';
+      this.bearerToken = '';
+      this.basicUsername = '';
+      this.basicPassword = '';
+      this.apiKeyName = '';
+      this.apiKeyValue = '';
+      this.apiKeyAddTo = 'header';
+    }
+  }
+
+  openCollectionContextMenu(event: MouseEvent, col: Collection) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeContextCollection = col;
+    this.activeContextColReq = null;
+    this.contextMenuPosition.x = event.clientX + 'px';
+    this.contextMenuPosition.y = event.clientY + 'px';
+    this.contextMenuTrigger.openMenu();
+  }
+
+  openColReqContextMenu(event: MouseEvent, col: Collection, req: CollectionRequest) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeContextColReq = { collection: col, request: req };
+    this.activeContextCollection = null;
+    this.contextMenuPosition.x = event.clientX + 'px';
+    this.contextMenuPosition.y = event.clientY + 'px';
+    this.contextMenuTrigger.openMenu();
+  }
+
+  editContextCollection() {
+    if (!this.activeContextCollection) return;
+    const col = this.activeContextCollection;
+    const dialogRef = this.dialog.open(CollectionDialogComponent, {
+      width: '480px',
+      panelClass: 'dark-dialog-panel',
+      data: { name: col.name, description: col.description }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.collectionService.updateCollection(col.id, result.name, result.description);
+        this.loadCollections();
+      }
+    });
+  }
+
+  deleteContextCollection() {
+    if (!this.activeContextCollection) return;
+    this.collectionService.deleteCollection(this.activeContextCollection.id);
+    this.loadCollections();
+  }
+
+  exportContextCollection() {
+    if (!this.activeContextCollection) return;
+    this.collectionService.exportCollection(this.activeContextCollection.id);
+  }
+
+  deleteContextColReq() {
+    if (!this.activeContextColReq) return;
+    this.collectionService.removeRequestFromCollection(
+      this.activeContextColReq.collection.id,
+      this.activeContextColReq.request.id
+    );
+    this.loadCollections();
+  }
+
+  triggerImportFile() {
+    this.importFileInput.nativeElement.click();
+  }
+
+  onImportFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = this.collectionService.importFromJson(e.target!.result as string);
+        this.loadCollections();
+        this.snackBar.open(
+          `Imported ${imported.length} collection(s) successfully.`,
+          'Close',
+          { duration: 3000 }
+        );
+      } catch (err: any) {
+        this.snackBar.open(`Import failed: ${err.message}`, 'Close', { duration: 5000 });
+      }
+      // Reset input so the same file can be re-imported if needed
+      input.value = '';
+    };
+    reader.readAsText(file);
   }
 
   loadHistoryItem(item: HistoryItem) {

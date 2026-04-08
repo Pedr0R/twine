@@ -6,10 +6,12 @@
       <img src="assets/twine-logo.png" alt="Logo">
     </div>
     <div class="server-separator"></div>
-    <div class="server-icon home-icon active" title="Requests">
+    <div class="server-icon home-icon" [class.active]="sidebarView === 'requests'"
+         title="Requests" (click)="sidebarView = 'requests'">
       <mat-icon>code</mat-icon>
     </div>
-    <div class="server-icon" title="Collections (Coming Soon)">
+    <div class="server-icon" [class.active]="sidebarView === 'collections'"
+         title="Collections" (click)="sidebarView = 'collections'">
       <mat-icon>folder</mat-icon>
     </div>
     <div class="server-icon" title="Settings (Coming Soon)">
@@ -20,62 +22,124 @@
     </div>
   </nav>
 
-  <!-- 2. Channel Sidebar (History) -->
+  <!-- 2. Channel Sidebar -->
   <aside class="channels-sidebar" [style.width.px]="sidebarWidth">
-    <header class="sidebar-header">
-      <h3 class="server-name">TWINE</h3>
-      <mat-icon class="header-icon">expand_more</mat-icon>
-    </header>
 
-    <div class="channels-scroller">
-      <div class="channel-category with-action">
-        <div class="category-header-wrap" (click)="isRequisitionsCollapsed = !isRequisitionsCollapsed"
-          style="cursor: pointer; flex: 1">
-          <mat-icon class="arrow" [class.collapsed]="isRequisitionsCollapsed">expand_more</mat-icon>
-          <span>MY REQUISITIONS</span>
+    <!-- ── REQUESTS VIEW ─────────────────────────────────── -->
+    <ng-container *ngIf="sidebarView === 'requests'">
+      <header class="sidebar-header">
+        <h3 class="server-name">TWINE</h3>
+        <mat-icon class="header-icon">expand_more</mat-icon>
+      </header>
+
+      <div class="channels-scroller">
+        <div class="channel-category with-action">
+          <div class="category-header-wrap" (click)="isRequisitionsCollapsed = !isRequisitionsCollapsed"
+            style="cursor: pointer; flex: 1">
+            <mat-icon class="arrow" [class.collapsed]="isRequisitionsCollapsed">expand_more</mat-icon>
+            <span>MY REQUISITIONS</span>
+          </div>
+          <mat-icon class="add-icon" (click)="createNewRequisition()" title="Create new request">add</mat-icon>
         </div>
-        <mat-icon class="add-icon" (click)="createNewRequisition()" title="Create new request">add</mat-icon>
+
+        <ng-container *ngIf="!isRequisitionsCollapsed">
+          <div *ngFor="let req of savedRequests" class="channel-item req-item" [class.active]="req.id === selectedItem"
+            (click)="loadRequisition(req)" (contextmenu)="openContextMenu($event, req)">
+            <mat-icon class="hash-icon">tag</mat-icon>
+            <div class="channel-name" [title]="req.description || req.name">
+              <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
+              <span class="url-text">{{req.name}}</span>
+            </div>
+          </div>
+          <div *ngIf="savedRequests.length === 0" class="empty-channels">
+            No saved requisitions yet.
+          </div>
+        </ng-container>
+
+        <div class="category-divider"></div>
+
+        <div class="channel-category" (click)="isHistoryCollapsed = !isHistoryCollapsed">
+          <mat-icon class="arrow" [class.collapsed]="isHistoryCollapsed">expand_more</mat-icon>
+          <span>HISTORY</span>
+        </div>
+
+        <ng-container *ngIf="!isHistoryCollapsed">
+          <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
+            (click)="loadHistoryItem(item)">
+            <mat-icon class="hash-icon">tag</mat-icon>
+            <div class="channel-name" [title]="item.config.url">
+              <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
+              <span class="url-text">{{item.config.url }}</span>
+            </div>
+          </div>
+          <div *ngIf="history.length === 0" class="empty-channels">
+            No past requests found.
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <!-- ── COLLECTIONS VIEW ──────────────────────────────── -->
+    <ng-container *ngIf="sidebarView === 'collections'">
+      <header class="sidebar-header collections-header">
+        <h3 class="server-name">COLLECTIONS</h3>
+      </header>
+
+      <!-- Toolbar: New + Import -->
+      <div class="collections-toolbar">
+        <button class="col-toolbar-btn" (click)="openCreateCollectionDialog()" title="New Collection">
+          <mat-icon>create_new_folder</mat-icon> New
+        </button>
+        <button class="col-toolbar-btn" (click)="triggerImportFile()" title="Import from JSON">
+          <mat-icon>upload_file</mat-icon> Import
+        </button>
+        <!-- Hidden file input for import -->
+        <input #importFileInput type="file" accept=".json" style="display:none"
+               (change)="onImportFileSelected($event)">
       </div>
 
-      <ng-container *ngIf="!isRequisitionsCollapsed">
+      <div class="channels-scroller">
+        <!-- Empty state -->
+        <div *ngIf="collections.length === 0" class="col-empty-state">
+          <mat-icon>folder_open</mat-icon>
+          <p>No collections yet.</p>
+          <p>Create one or import a JSON file.</p>
+        </div>
 
-        <div *ngFor="let req of savedRequests" class="channel-item req-item" [class.active]="req.id === selectedItem"
-          (click)="loadRequisition(req)" (contextmenu)="openContextMenu($event, req)">
-          <mat-icon class="hash-icon">tag</mat-icon>
-          <div class="channel-name" [title]="req.description || req.name">
-            <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
-            <span class="url-text">{{req.name}}</span>
+        <!-- Collection folders -->
+        <div *ngFor="let col of collections" class="collection-folder">
+          <!-- Folder header -->
+          <div class="col-header channel-category with-action"
+               (click)="toggleCollection(col.id)"
+               (contextmenu)="openCollectionContextMenu($event, col)">
+            <div class="category-header-wrap">
+              <mat-icon class="arrow" [class.collapsed]="isCollectionCollapsed(col.id)">expand_more</mat-icon>
+              <mat-icon class="folder-icon">folder</mat-icon>
+              <span class="col-name">{{ col.name }}</span>
+            </div>
+            <span class="col-count">{{ col.requests.length }}</span>
           </div>
+
+          <!-- Requests inside folder -->
+          <ng-container *ngIf="!isCollectionCollapsed(col.id)">
+            <div *ngFor="let req of col.requests"
+                 class="channel-item col-request-item"
+                 [class.active]="req.id === selectedItem"
+                 (click)="loadCollectionRequest(req)"
+                 (contextmenu)="openColReqContextMenu($event, col, req)">
+              <mat-icon class="hash-icon">tag</mat-icon>
+              <div class="channel-name" [title]="req.description || req.name">
+                <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
+                <span class="url-text">{{ req.name }}</span>
+              </div>
+            </div>
+            <div *ngIf="col.requests.length === 0" class="empty-channels col-empty-folder">
+              No requests in this collection.
+            </div>
+          </ng-container>
         </div>
-
-        <div *ngIf="savedRequests.length === 0" class="empty-channels">
-          No saved requisitions yet.
-        </div>
-      </ng-container>
-
-      <div class="category-divider"></div>
-
-      <div class="channel-category" (click)="isHistoryCollapsed = !isHistoryCollapsed">
-        <mat-icon class="arrow" [class.collapsed]="isHistoryCollapsed">expand_more</mat-icon>
-        <span>HISTORY</span>
       </div>
-
-      <ng-container *ngIf="!isHistoryCollapsed">
-
-        <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
-          (click)="loadHistoryItem(item)">
-          <mat-icon class="hash-icon">tag</mat-icon>
-          <div class="channel-name" [title]="item.config.url">
-            <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
-            <span class="url-text">{{item.config.url }}</span>
-          </div>
-        </div>
-
-        <div *ngIf="history.length === 0" class="empty-channels">
-          No past requests found.
-        </div>
-      </ng-container>
-    </div>
+    </ng-container>
 
     <div class="sidebar-resizer" (mousedown)="startResize($event)"></div>
   </aside>
@@ -98,6 +162,10 @@
         <input type="text" class="discord-input main-url-input"
           placeholder="Enter request URL (e.g. https://api.example.com)..." [(ngModel)]="url"
           (ngModelChange)="onUrlChange()" spellcheck="false">
+
+        <button class="discord-btn-secondary outline save-col-btn" (click)="saveCurrentRequestToCollection()" title="Save to Collection">
+          <mat-icon>bookmark_add</mat-icon>
+        </button>
 
         <button class="discord-btn-primary" [disabled]="!canSend" (click)="sendRequest()">
           <span *ngIf="!isLoading">Send Request</span>
@@ -310,19 +378,50 @@
   </main>
 </div>
 
-<!-- Context Menu Trigger -->
+<!-- Context Menu Trigger (shared) -->
 <div style="visibility: hidden; position: fixed" [style.left]="contextMenuPosition.x"
   [style.top]="contextMenuPosition.y" [matMenuTriggerFor]="contextMenu">
 </div>
 
-<!-- Context Menu Definition -->
+<!-- Context Menu: Saved Requisitions -->
 <mat-menu #contextMenu="matMenu" class="discord-context-menu">
-  <button mat-menu-item (click)="editContextRequisition()">
-    <mat-icon>edit</mat-icon>
-    <span>Edit Requisition</span>
-  </button>
-  <button mat-menu-item (click)="deleteContextRequisition()" style="color: #f04747">
-    <mat-icon>delete</mat-icon>
-    <span>Delete</span>
-  </button>
+  <!-- Requisition actions -->
+  <ng-container *ngIf="activeContextReq">
+    <button mat-menu-item (click)="editContextRequisition()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Requisition</span>
+    </button>
+    <button mat-menu-item (click)="deleteContextRequisition()" style="color: #f04747">
+      <mat-icon>delete</mat-icon>
+      <span>Delete</span>
+    </button>
+  </ng-container>
+
+  <!-- Collection folder actions -->
+  <ng-container *ngIf="activeContextCollection">
+    <button mat-menu-item (click)="editContextCollection()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit Collection</span>
+    </button>
+    <button mat-menu-item (click)="exportContextCollection()">
+      <mat-icon>download</mat-icon>
+      <span>Export as JSON</span>
+    </button>
+    <button mat-menu-item (click)="deleteContextCollection()" style="color: #f04747">
+      <mat-icon>delete</mat-icon>
+      <span>Delete Collection</span>
+    </button>
+  </ng-container>
+
+  <!-- Collection request actions -->
+  <ng-container *ngIf="activeContextColReq">
+    <button mat-menu-item (click)="loadCollectionRequest(activeContextColReq.request)">
+      <mat-icon>open_in_new</mat-icon>
+      <span>Open Request</span>
+    </button>
+    <button mat-menu-item (click)="deleteContextColReq()" style="color: #f04747">
+      <mat-icon>delete</mat-icon>
+      <span>Remove from Collection</span>
+    </button>
+  </ng-container>
 </mat-menu>
