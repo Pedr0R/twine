@@ -1,27 +1,68 @@
-# TWINE
+<div align="center">
+  <img src="public/assets/twine-logo.png" alt="Twine Logo" width="200"/>
+  <h1>TWINE</h1>
+  <p>A fast, modern, and lightweight HTTP Request Engine & API Testing Tool.</p>
+</div>
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.21.
+---
 
-## Development server
+## 📖 About Twine
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+Twine is a Postman/Hoppscotch-style API testing tool designed to streamline request workflows. It provides a clean, highly reactive interface to manage API integrations, inspect HTTP parameters, headers, and payloads, and validate your endpoints effortlessly without CORS friction.
 
-## Code scaffolding
+## ✨ Features
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- **Dynamic Request Configuration**: Supports standard HTTP methods (GET, POST, PUT, PATCH, DELETE, OPTIONS).
+- **Header Management**: Easily construct and visualize header key-value pairs (e.g., `Authorization`, `Content-Type`).
+- **Query Parameters**: Simple URL param configuration that automatically synchronizes with the main URL.
+- **Request Body Support**: Submit payloads seamlessly via JSON (with syntax validation), Form-Data, or plain text.
+- **Real-Time Execution & Monitoring**: Measures request response times (ms), HTTP status codes, and received payload sizes.
+- **Smart Response Viewer**: Built-in JSON formatting (pretty-print) and support for downloading binary file responses (e.g., `.pdf`, `.xlsx`).
+- **Execution History**: Keeps a local record of recently tested requests for quick continuous testing.
 
-## Build
+## 🚀 Tech Stack
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+- **Frontend**: [Angular v18](https://angular.dev/)
+- **State & UX**: Highly reactive interface built for smooth offline-first and proxy-enabled network testing.
+- **Environment**: Available both as a Web application and a standalone Desktop client (Electron).
 
-## Running unit tests
+---
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## 🛠️ Getting Started
 
-## Running end-to-end tests
+### Prerequisites
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Ensure you have [Node.js](https://nodejs.org/) and [Angular CLI](https://github.com/angular/angular-cli) installed globally.
 
-## Further help
+### Installation
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+1. Clone this repository.
+2. Install the necessary dependencies:
+   ```bash
+   npm install
+   ```
+
+### Development Server
+
+To start the development server using Angular CLI:
+```bash
+ng serve
+```
+Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+
+### Build
+
+Run the following command to build the project for production:
+```bash
+ng build
+```
+The build artifacts will be stored in the `dist/` directory.
+
+### Running Tests
+
+- **Unit tests:** Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+- **End-to-End tests:** Run `ng e2e` to execute the end-to-end tests via a platform of your choice.
+
+## 📄 Documentation
+
+For detailed functional and non-functional requirements, and the initial execution scope, check out the [`specs.md`](./specs.md) file included in the repository.
