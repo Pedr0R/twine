@@ -60,6 +60,9 @@ export class AppComponent implements OnInit {
   sidebarWidth: number = 240;
   isResizingSidebar: boolean = false;
 
+  isRequisitionsCollapsed: boolean = false;
+  isHistoryCollapsed: boolean = false;
+
   @ViewChild(MatMenuTrigger) contextMenuTrigger!: MatMenuTrigger;
   contextMenuPosition = { x: '0px', y: '0px' };
   activeContextReq: Requisition | null = null;

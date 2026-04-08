@@ -240,10 +240,15 @@
 }
 
 .channel-category .arrow {
-  font-size: 12px;
-  width: 12px;
-  height: 12px;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
   margin-right: 2px;
+  transition: transform 0.2s ease;
+}
+
+.channel-category .arrow.collapsed {
+  transform: rotate(-90deg);
 }
 
 .channel-item {

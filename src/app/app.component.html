@@ -29,45 +29,52 @@
 
     <div class="channels-scroller">
       <div class="channel-category with-action">
-        <div class="category-header-wrap">
-          <mat-icon class="arrow">expand_more</mat-icon>
+        <div class="category-header-wrap" (click)="isRequisitionsCollapsed = !isRequisitionsCollapsed"
+          style="cursor: pointer; flex: 1">
+          <mat-icon class="arrow" [class.collapsed]="isRequisitionsCollapsed">expand_more</mat-icon>
           <span>MY REQUISITIONS</span>
         </div>
         <mat-icon class="add-icon" (click)="createNewRequisition()" title="Create new request">add</mat-icon>
       </div>
 
-      <div *ngFor="let req of savedRequests" class="channel-item req-item" [class.active]="req.id === selectedItem"
-        (click)="loadRequisition(req)" (contextmenu)="openContextMenu($event, req)">
-        <mat-icon class="hash-icon">tag</mat-icon>
-        <div class="channel-name" [title]="req.description || req.name">
-          <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
-          <span class="url-text">{{req.name}}</span>
-        </div>
-      </div>
+      <ng-container *ngIf="!isRequisitionsCollapsed">
 
-      <div *ngIf="savedRequests.length === 0" class="empty-channels">
-        No saved requisitions yet.
-      </div>
+        <div *ngFor="let req of savedRequests" class="channel-item req-item" [class.active]="req.id === selectedItem"
+          (click)="loadRequisition(req)" (contextmenu)="openContextMenu($event, req)">
+          <mat-icon class="hash-icon">tag</mat-icon>
+          <div class="channel-name" [title]="req.description || req.name">
+            <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
+            <span class="url-text">{{req.name}}</span>
+          </div>
+        </div>
+
+        <div *ngIf="savedRequests.length === 0" class="empty-channels">
+          No saved requisitions yet.
+        </div>
+      </ng-container>
 
       <div class="category-divider"></div>
 
-      <div class="channel-category">
-        <mat-icon class="arrow">expand_more</mat-icon>
-        <span>EXECUTION HISTORY</span>
+      <div class="channel-category" (click)="isHistoryCollapsed = !isHistoryCollapsed">
+        <mat-icon class="arrow" [class.collapsed]="isHistoryCollapsed">expand_more</mat-icon>
+        <span>HISTORY</span>
       </div>
 
-      <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
-        (click)="loadHistoryItem(item)">
-        <mat-icon class="hash-icon">tag</mat-icon>
-        <div class="channel-name" [title]="item.config.url">
-          <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
-          <span class="url-text">{{item.config.url }}</span>
+      <ng-container *ngIf="!isHistoryCollapsed">
+
+        <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
+          (click)="loadHistoryItem(item)">
+          <mat-icon class="hash-icon">tag</mat-icon>
+          <div class="channel-name" [title]="item.config.url">
+            <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
+            <span class="url-text">{{item.config.url }}</span>
+          </div>
         </div>
-      </div>
 
-      <div *ngIf="history.length === 0" class="empty-channels">
-        No past requests found.
-      </div>
+        <div *ngIf="history.length === 0" class="empty-channels">
+          No past requests found.
+        </div>
+      </ng-container>
     </div>
 
     <div class="sidebar-resizer" (mousedown)="startResize($event)"></div>
