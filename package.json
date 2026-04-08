@@ -1,5 +1,5 @@
 {
-  "name": "cattp",
+  "name": "twine",
   "version": "0.0.0",
   "main": "electron/main.js",
   "scripts": {
@@ -46,11 +46,11 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "com.cattp.app",
-    "productName": "CATTP",
+    "appId": "com.twine.app",
+    "productName": "TWINE",
     "win": {
       "target": "nsis",
-      "icon": "src/assets/HttpBuddyLogo.png"
+      "icon": "public/assets/twine-logo.png"
     },
     "directories": {
       "output": "release"

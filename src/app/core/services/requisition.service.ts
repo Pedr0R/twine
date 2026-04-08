@@ -13,7 +13,7 @@ export interface Requisition {
   providedIn: 'root'
 })
 export class RequisitionService {
-  private readonly STORAGE_KEY = 'cattp_requisitions_v1';
+  private readonly STORAGE_KEY = 'twine_requisitions_v1';
 
   constructor() { }
 

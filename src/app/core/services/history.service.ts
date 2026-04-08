@@ -11,7 +11,7 @@ export interface HistoryItem {
   providedIn: 'root'
 })
 export class HistoryService {
-  private readonly STORAGE_KEY = 'cattp_history';
+  private readonly STORAGE_KEY = 'twine_history';
 
   constructor() { }
 

@@ -27,7 +27,7 @@ function createWindow() {
   } else {
     mainWindow.loadURL(
       url.format({
-        pathname: path.join(__dirname, '../dist/cattp/browser/index.html'),
+        pathname: path.join(__dirname, '../dist/twine/browser/index.html'),
         protocol: 'file:',
         slashes: true
       })
