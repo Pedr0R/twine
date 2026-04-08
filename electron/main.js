@@ -18,7 +18,6 @@ function createWindow() {
       webSecurity: false // Necessary if we want fetch from renderer to bypass CORS, but we will use IPC anyway
     }
   });
-
   const isDev = process.argv.includes('--dev');
 
   if (isDev) {
@@ -33,6 +32,8 @@ function createWindow() {
       })
     );
   }
+
+  mainWindow.removeMenu();
 
   mainWindow.on('closed', function () {
     mainWindow = null;
@@ -73,7 +74,7 @@ ipcMain.handle('send-request', async (event, config) => {
         });
         Object.assign(options.headers, form.getHeaders());
       } else if (body) {
-         options.headers['Content-Length'] = Buffer.byteLength(body);
+        options.headers['Content-Length'] = Buffer.byteLength(body);
       }
 
       const req = requestModule.request(parsedUrl, options, (res) => {

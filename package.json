@@ -1,6 +1,6 @@
 {
   "name": "twine",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "electron/main.js",
   "scripts": {
     "ng": "ng",
@@ -50,7 +50,7 @@
     "productName": "TWINE",
     "win": {
       "target": "nsis",
-      "icon": "public/assets/twine-logo.png"
+      "icon": "public/assets/twine-icon.png"
     },
     "directories": {
       "output": "release"
