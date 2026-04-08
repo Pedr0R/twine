@@ -2,6 +2,13 @@
   "name": "twine",
   "version": "1.0.0",
   "main": "electron/main.js",
+  "author": {
+    "name": "Pedro Ramos",
+    "email": "pramossilva03@gmail.com",
+    "url": "https://github.com/Pedr0R"
+  },
+  "description": "Twine is requisition engine for API testing.",
+  "license": "MIT",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 5200",
