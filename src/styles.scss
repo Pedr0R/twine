@@ -77,3 +77,30 @@ div {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Context Menu Overrides */
+.discord-context-menu {
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--background-modifier-active);
+}
+
+.discord-context-menu .mat-mdc-menu-item {
+  color: var(--text-normal) !important;
+  font-family: var(--font-mono), sans-serif;
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.discord-context-menu .mat-mdc-menu-item:hover {
+  background-color: var(--background-modifier-hover) !important;
+}
+
+.discord-context-menu .mat-mdc-menu-item .mat-icon {
+  color: var(--text-muted);
+}
+
+.discord-context-menu mat-icon {
+  color: var(--text-muted);
+  font-size: 20px;
+  margin-right: -12px;
+}

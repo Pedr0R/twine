@@ -4,8 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ViewChild } from '@angular/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { RequestService, HttpRequestConfig, HttpResponse } from './core/services/request.service';
 import { HistoryService, HistoryItem } from './core/services/history.service';
+import { RequisitionService, Requisition } from './core/services/requisition.service';
+import { SaveRequisitionDialogComponent } from './components/save-requisition-dialog/save-requisition-dialog.component';
 
 interface KeyValuePair {
   key: string;
@@ -16,7 +21,7 @@ interface KeyValuePair {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatIconModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatIconModule, MatSnackBarModule, MatDialogModule, MatMenuModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -40,12 +45,24 @@ export class AppComponent implements OnInit {
   // History
   history: HistoryItem[] = [];
 
+  // Saved Requests
+  savedRequests: Requisition[] = [];
+
   // Response
   response: HttpResponse | null = null;
   selectedItem: string = '';
 
+  get currentRequestName(): string {
+    const req = this.savedRequests.find(r => r.id === this.selectedItem);
+    return req ? req.name : 'new-request';
+  }
+
   sidebarWidth: number = 240;
   isResizingSidebar: boolean = false;
+
+  @ViewChild(MatMenuTrigger) contextMenuTrigger!: MatMenuTrigger;
+  contextMenuPosition = { x: '0px', y: '0px' };
+  activeContextReq: Requisition | null = null;
 
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
@@ -70,11 +87,18 @@ export class AppComponent implements OnInit {
   constructor(
     private reqService: RequestService,
     private historyService: HistoryService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog,
+    private requisitionService: RequisitionService
   ) { }
 
   ngOnInit() {
     this.loadHistory();
+    this.loadRequisitions();
+  }
+
+  loadRequisitions() {
+    this.savedRequests = this.requisitionService.getRequisitions();
   }
 
   loadHistory() {
@@ -98,6 +122,15 @@ export class AppComponent implements OnInit {
       this.queryParams = newParams;
     } catch {
       // Ignore invalid intermediate URLs
+    }
+  }
+
+  onMethodChange() {
+    const req = this.savedRequests.find(r => r.id === this.selectedItem);
+    if (req) {
+       req.config.method = this.method;
+       this.requisitionService.updateRequisitionConfig(req.id, req.config);
+       this.loadRequisitions();
     }
   }
 
@@ -245,6 +278,89 @@ export class AppComponent implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  createNewRequisition() {
+    this.updateUrlFromParams();
+    
+    const finalHeaders: Record<string, string> = {};
+    this.headers.forEach(h => {
+      if (h.enabled && h.key) {
+        finalHeaders[h.key] = h.value;
+      }
+    });
+
+    if (this.bodyType === 'JSON' && this.bodyContent && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
+      if (!Object.keys(finalHeaders).find(k => k.toLowerCase() === 'content-type')) {
+        finalHeaders['Content-Type'] = 'application/json';
+      }
+    }
+
+    let formDataFinal: Record<string, string> | undefined = undefined;
+    if (this.bodyType === 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
+      formDataFinal = {};
+      this.formDataFields.forEach(f => {
+        if (f.enabled && f.key) {
+          formDataFinal![f.key] = f.value;
+        }
+      });
+      if (Object.keys(formDataFinal).length === 0) {
+        formDataFinal = undefined;
+      }
+    }
+
+    const config: HttpRequestConfig = {
+      method: this.method,
+      url: this.url,
+      headers: finalHeaders,
+      body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim() ? this.bodyContent : undefined,
+      formDataPayload: formDataFinal
+    };
+
+    const newReq = this.requisitionService.addRequisition('new-request', '', config);
+    this.loadRequisitions();
+    this.selectedItem = newReq.id;
+  }
+
+  openContextMenu(event: MouseEvent, req: Requisition) {
+    event.preventDefault();
+    this.contextMenuPosition.x = event.clientX + 'px';
+    this.contextMenuPosition.y = event.clientY + 'px';
+    this.activeContextReq = req;
+    this.contextMenuTrigger.openMenu();
+  }
+
+  editContextRequisition() {
+    if(!this.activeContextReq) return;
+    const req = this.activeContextReq;
+    const dialogRef = this.dialog.open(SaveRequisitionDialogComponent, {
+      width: '450px',
+      panelClass: 'dark-dialog-panel',
+      data: { name: req.name, description: req.description }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.requisitionService.updateRequisition(req.id, result.name, result.description);
+        this.loadRequisitions();
+      }
+    });
+  }
+
+  deleteContextRequisition() {
+    if(!this.activeContextReq) return;
+    this.requisitionService.deleteRequisition(this.activeContextReq.id);
+    if (this.selectedItem === this.activeContextReq.id) {
+        this.selectedItem = '';
+    }
+    this.loadRequisitions();
+  }
+
+  loadRequisition(req: Requisition) {
+    this.selectedItem = req.id;
+    const mockHistoryItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
+    this.loadHistoryItem(mockHistoryItem);
+    this.selectedItem = req.id;
   }
 
   loadHistoryItem(item: HistoryItem) {

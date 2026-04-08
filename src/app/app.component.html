@@ -28,6 +28,29 @@
     </header>
 
     <div class="channels-scroller">
+      <div class="channel-category with-action">
+        <div class="category-header-wrap">
+          <mat-icon class="arrow">expand_more</mat-icon>
+          <span>MY REQUISITIONS</span>
+        </div>
+        <mat-icon class="add-icon" (click)="createNewRequisition()" title="Create new request">add</mat-icon>
+      </div>
+
+      <div *ngFor="let req of savedRequests" class="channel-item req-item" [class.active]="req.id === selectedItem"
+        (click)="loadRequisition(req)" (contextmenu)="openContextMenu($event, req)">
+        <mat-icon class="hash-icon">tag</mat-icon>
+        <div class="channel-name" [title]="req.description || req.name">
+          <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
+          <span class="url-text">{{req.name}}</span>
+        </div>
+      </div>
+
+      <div *ngIf="savedRequests.length === 0" class="empty-channels">
+        No saved requisitions yet.
+      </div>
+
+      <div class="category-divider"></div>
+
       <div class="channel-category">
         <mat-icon class="arrow">expand_more</mat-icon>
         <span>EXECUTION HISTORY</span>
@@ -57,11 +80,11 @@
     <header class="chat-header">
       <div class="header-title">
         <mat-icon class="hash-icon">tag</mat-icon>
-        <h3>new-request</h3>
+        <h3>{{ currentRequestName }}</h3>
       </div>
 
       <div class="request-bar">
-        <select class="discord-dropdown" [(ngModel)]="method">
+        <select class="discord-dropdown" [(ngModel)]="method" (ngModelChange)="onMethodChange()">
           <option *ngFor="let m of methods" [value]="m">{{m}}</option>
         </select>
 
@@ -195,3 +218,20 @@
     </div>
   </main>
 </div>
+
+<!-- Context Menu Trigger -->
+<div style="visibility: hidden; position: fixed" [style.left]="contextMenuPosition.x"
+  [style.top]="contextMenuPosition.y" [matMenuTriggerFor]="contextMenu">
+</div>
+
+<!-- Context Menu Definition -->
+<mat-menu #contextMenu="matMenu" class="discord-context-menu">
+  <button mat-menu-item (click)="editContextRequisition()">
+    <mat-icon>edit</mat-icon>
+    <span>Edit Requisition</span>
+  </button>
+  <button mat-menu-item (click)="deleteContextRequisition()" style="color: #f04747">
+    <mat-icon>delete</mat-icon>
+    <span>Delete</span>
+  </button>
+</mat-menu>
