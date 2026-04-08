@@ -34,6 +34,15 @@ export class AppComponent implements OnInit {
   headers: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
   queryParams: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
 
+  // Auth
+  authType: string = 'none';
+  bearerToken: string = '';
+  basicUsername: string = '';
+  basicPassword: string = '';
+  apiKeyName: string = '';
+  apiKeyValue: string = '';
+  apiKeyAddTo: string = 'header';
+
   bodyType: string = 'JSON';
   bodyContent: string = '{\n\n}';
   formDataFields: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
@@ -138,6 +147,16 @@ export class AppComponent implements OnInit {
     }
   }
 
+  onAuthTypeChange() {
+    // Clear credentials when switching type
+    this.bearerToken = '';
+    this.basicUsername = '';
+    this.basicPassword = '';
+    this.apiKeyName = '';
+    this.apiKeyValue = '';
+    this.apiKeyAddTo = 'header';
+  }
+
   updateUrlFromParams() {
     try {
       let tempUrl = this.url;
@@ -238,6 +257,19 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Inject Auth
+      if (this.authType === 'bearer' && this.bearerToken) {
+        finalHeaders['Authorization'] = `Bearer ${this.bearerToken}`;
+      } else if (this.authType === 'basic' && this.basicUsername) {
+        const encoded = btoa(`${this.basicUsername}:${this.basicPassword}`);
+        finalHeaders['Authorization'] = `Basic ${encoded}`;
+      } else if (this.authType === 'api-key' && this.apiKeyName) {
+        if (this.apiKeyAddTo === 'header') {
+          finalHeaders[this.apiKeyName] = this.apiKeyValue;
+        }
+        // query param case handled below via queryParams injection
+      }
+
       // Inject content type if JSON
       if (this.bodyType === 'JSON' && this.bodyContent && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
         if (!Object.keys(finalHeaders).find(k => k.toLowerCase() === 'content-type')) {
@@ -260,9 +292,19 @@ export class AppComponent implements OnInit {
         }
       }
 
+      // Inject API key as query param if needed
+      let urlForRequest = finalUrl;
+      if (this.authType === 'api-key' && this.apiKeyAddTo === 'query' && this.apiKeyName) {
+        try {
+          const parsedForAuth = new URL(urlForRequest);
+          parsedForAuth.searchParams.set(this.apiKeyName, this.apiKeyValue);
+          urlForRequest = parsedForAuth.toString();
+        } catch { /* ignore */ }
+      }
+
       const config: HttpRequestConfig = {
         method: this.method,
-        url: finalUrl,
+        url: urlForRequest,
         headers: finalHeaders,
         body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim() ? this.bodyContent : undefined,
         formDataPayload: formDataFinal

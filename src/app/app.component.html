@@ -113,6 +113,83 @@
       <div class="config-panel">
         <mat-tab-group class="discord-tabs" mat-stretch-tabs="false" animationDuration="0ms">
 
+          <mat-tab label="Auth">
+            <div class="tab-pane auth-pane">
+
+              <div class="auth-type-row">
+                <label class="auth-label">Auth Type</label>
+                <select class="discord-dropdown auth-dropdown" [(ngModel)]="authType" (ngModelChange)="onAuthTypeChange()">
+                  <option value="none">No Auth</option>
+                  <option value="bearer">Bearer Token</option>
+                  <option value="basic">Basic Auth</option>
+                  <option value="api-key">API Key</option>
+                </select>
+              </div>
+
+              <!-- None -->
+              <div *ngIf="authType === 'none'" class="auth-empty">
+                <mat-icon class="auth-empty-icon">lock_open</mat-icon>
+                <p>No authentication will be sent with this request.</p>
+              </div>
+
+              <!-- Bearer Token -->
+              <div *ngIf="authType === 'bearer'" class="auth-section">
+                <div class="auth-info-banner">
+                  <mat-icon>info</mat-icon>
+                  <span>Token will be sent as <code>Authorization: Bearer &lt;token&gt;</code></span>
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Token</label>
+                  <input type="text" class="discord-input auth-input" placeholder="Enter bearer token..." [(ngModel)]="bearerToken">
+                </div>
+              </div>
+
+              <!-- Basic Auth -->
+              <div *ngIf="authType === 'basic'" class="auth-section">
+                <div class="auth-info-banner">
+                  <mat-icon>info</mat-icon>
+                  <span>Credentials will be Base64-encoded and sent as <code>Authorization: Basic &lt;token&gt;</code></span>
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Username</label>
+                  <input type="text" class="discord-input auth-input" placeholder="Enter username..." [(ngModel)]="basicUsername" autocomplete="off">
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Password</label>
+                  <input type="password" class="discord-input auth-input" placeholder="Enter password..." [(ngModel)]="basicPassword" autocomplete="off">
+                </div>
+              </div>
+
+              <!-- API Key -->
+              <div *ngIf="authType === 'api-key'" class="auth-section">
+                <div class="auth-info-banner">
+                  <mat-icon>info</mat-icon>
+                  <span>Key/value pair sent as a request header or query parameter.</span>
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Key</label>
+                  <input type="text" class="discord-input auth-input" placeholder="e.g. X-API-KEY" [(ngModel)]="apiKeyName">
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Value</label>
+                  <input type="text" class="discord-input auth-input" placeholder="Enter API key value..." [(ngModel)]="apiKeyValue">
+                </div>
+                <div class="auth-field-group">
+                  <label class="auth-field-label">Add To</label>
+                  <div class="auth-radio-group">
+                    <label class="auth-radio-label" [class.selected]="apiKeyAddTo === 'header'">
+                      <input type="radio" value="header" [(ngModel)]="apiKeyAddTo" style="display:none"> Header
+                    </label>
+                    <label class="auth-radio-label" [class.selected]="apiKeyAddTo === 'query'">
+                      <input type="radio" value="query" [(ngModel)]="apiKeyAddTo" style="display:none"> Query Param
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </mat-tab>
+
           <mat-tab label="Query Params">
             <div class="tab-pane">
               <div *ngFor="let p of queryParams; let i = index" class="kv-row">
