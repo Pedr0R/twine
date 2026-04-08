@@ -3,6 +3,14 @@
   <h1>TWINE</h1>
   <p>A fast, modern, and lightweight HTTP Request Engine & API Testing Tool.</p>
 </div>
+<div align="center">
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/pramos30/)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Pedr0R)
+[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/dev.pramos/)
+
+</div>
+
 
 ---
 
@@ -66,3 +74,16 @@ The build artifacts will be stored in the `dist/` directory.
 ## 📄 Documentation
 
 For detailed functional and non-functional requirements, and the initial execution scope, check out the [`specs.md`](./specs.md) file included in the repository.
+
+---
+
+## 🔗 Connect with Me
+
+<div align="center">
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/pramos30/)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Pedr0R)
+[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/dev.pramos/)
+
+</div>
+
