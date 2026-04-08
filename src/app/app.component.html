@@ -212,11 +212,18 @@
             <div *ngIf="response.body">
               <div class="editor-toolbar">
                 <span class="lang-label">JSON</span>
-                <button class="discord-btn-secondary outline" (click)="downloadBinary()">
-                  <mat-icon>download</mat-icon> Download Raw
-                </button>
+                <div class="toolbar-actions">
+                  <button class="discord-btn-secondary outline copy-btn" [class.copied]="isCopied"
+                    (click)="copyResponseBody()">
+                    <mat-icon>{{ isCopied ? 'check' : 'content_copy' }}</mat-icon>
+                    {{ isCopied ? 'Copied!' : 'Copy' }}
+                  </button>
+                  <button class="discord-btn-secondary outline copy-btn" (click)="downloadBinary()">
+                    <mat-icon>download</mat-icon> Download Raw
+                  </button>
+                </div>
               </div>
-              <pre class="code-viewer">{{ getResponseBodyDisplay() }}</pre>
+              <pre class="code-viewer selectable">{{ getResponseBodyDisplay() }}</pre>
             </div>
           </div>
         </div>

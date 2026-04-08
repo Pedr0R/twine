@@ -851,6 +851,35 @@
   text-transform: uppercase;
 }
 
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.copy-btn mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.copy-btn.copied {
+  color: #43b581;
+  border-color: #43b581;
+}
+
+.code-viewer.selectable {
+  user-select: text;
+  cursor: text;
+}
+
 /* Custom Material Tabs Overrides to match Discord */
 ::ng-deep .mat-mdc-tab-header {
   background-color: transparent !important;

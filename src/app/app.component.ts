@@ -41,6 +41,7 @@ export class AppComponent implements OnInit {
   // State
   isLoading: boolean = false;
   isValidJson: boolean = true;
+  isCopied: boolean = false;
 
   // History
   history: HistoryItem[] = [];
@@ -450,5 +451,13 @@ export class AppComponent implements OnInit {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  copyResponseBody() {
+    const text = this.getResponseBodyDisplay();
+    navigator.clipboard.writeText(text).then(() => {
+      this.isCopied = true;
+      setTimeout(() => this.isCopied = false, 2000);
+    });
   }
 }
