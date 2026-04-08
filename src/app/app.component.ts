@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -25,29 +25,53 @@ export class AppComponent implements OnInit {
   method: string = 'GET';
   methods: string[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
   url: string = '';
-  
+
   headers: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
   queryParams: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
-  
+
   bodyType: string = 'JSON';
   bodyContent: string = '{\n\n}';
   formDataFields: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
-  
+
   // State
   isLoading: boolean = false;
   isValidJson: boolean = true;
-  
+
   // History
   history: HistoryItem[] = [];
-  
+
   // Response
   response: HttpResponse | null = null;
-  
+  selectedItem: string = '';
+
+  sidebarWidth: number = 240;
+  isResizingSidebar: boolean = false;
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent) {
+    if (!this.isResizingSidebar) return;
+    let newWidth = event.clientX - 72;
+    if (newWidth < 150) newWidth = 150;
+    if (newWidth > 600) newWidth = 600;
+    this.sidebarWidth = newWidth;
+    event.preventDefault();
+  }
+
+  @HostListener('document:mouseup')
+  onMouseUp() {
+    this.isResizingSidebar = false;
+  }
+
+  startResize(event: MouseEvent) {
+    this.isResizingSidebar = true;
+    event.preventDefault();
+  }
+
   constructor(
     private reqService: RequestService,
     private historyService: HistoryService,
     private snackBar: MatSnackBar
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.loadHistory();
@@ -58,7 +82,47 @@ export class AppComponent implements OnInit {
   }
 
   onUrlChange() {
-    // URL dynamically updates query param UI if mapped later. Handled upon history item load.
+    try {
+      let tempUrl = this.url;
+      if (!tempUrl.startsWith('http://') && !tempUrl.startsWith('https://')) {
+        tempUrl = 'http://' + tempUrl;
+      }
+      const parsedUrl = new URL(tempUrl);
+      const newParams: KeyValuePair[] = [];
+      parsedUrl.searchParams.forEach((value, key) => {
+        newParams.push({ key, value, enabled: true });
+      });
+      if (newParams.length === 0) {
+        newParams.push({ key: '', value: '', enabled: true });
+      }
+      this.queryParams = newParams;
+    } catch {
+      // Ignore invalid intermediate URLs
+    }
+  }
+
+  updateUrlFromParams() {
+    try {
+      let tempUrl = this.url;
+      if (!tempUrl.trim()) return;
+      let hasHttp = true;
+      if (!tempUrl.startsWith('http://') && !tempUrl.startsWith('https://')) {
+        tempUrl = 'http://' + tempUrl;
+        hasHttp = false;
+      }
+      const parsedUrl = new URL(tempUrl);
+      parsedUrl.search = '';
+      this.queryParams.forEach(q => {
+        if (q.enabled && q.key) {
+          parsedUrl.searchParams.append(q.key, q.value);
+        }
+      });
+      let finalUrl = parsedUrl.toString();
+      if (!hasHttp) finalUrl = finalUrl.replace(/^http:\/\//, '');
+      this.url = finalUrl;
+    } catch {
+      // Ignore invalid intermediate URLs
+    }
   }
 
   addHeader() {
@@ -71,10 +135,12 @@ export class AppComponent implements OnInit {
 
   addQueryParam() {
     this.queryParams.push({ key: '', value: '', enabled: true });
+    this.updateUrlFromParams();
   }
 
   removeQueryParam(index: number) {
     this.queryParams.splice(index, 1);
+    this.updateUrlFromParams();
   }
 
   addFormDataField() {
@@ -108,12 +174,12 @@ export class AppComponent implements OnInit {
 
   async sendRequest() {
     this.validateJson();
-    
+
     if (!this.isValidUrl) {
       this.snackBar.open('Invalid URL. Must start with http:// or https://', 'Close', { duration: 3000 });
       return;
     }
-    
+
     if (!this.isValidJson) {
       this.snackBar.open('Invalid JSON syntax in body.', 'Close', { duration: 3000 });
       return;
@@ -124,13 +190,8 @@ export class AppComponent implements OnInit {
 
     try {
       // Build final URL with query params
-      const parsedUrl = new URL(this.url);
-      this.queryParams.forEach(q => {
-        if (q.enabled && q.key) {
-          parsedUrl.searchParams.append(q.key, q.value);
-        }
-      });
-      const finalUrl = parsedUrl.toString();
+      this.updateUrlFromParams();
+      const finalUrl = this.url;
 
       // Build Headers Map
       const finalHeaders: Record<string, string> = {};
@@ -139,27 +200,27 @@ export class AppComponent implements OnInit {
           finalHeaders[h.key] = h.value;
         }
       });
-      
+
       // Inject content type if JSON
       if (this.bodyType === 'JSON' && this.bodyContent && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
         if (!Object.keys(finalHeaders).find(k => k.toLowerCase() === 'content-type')) {
-           finalHeaders['Content-Type'] = 'application/json';
+          finalHeaders['Content-Type'] = 'application/json';
         }
       }
 
       // Convert formDataFields
       let formDataFinal: Record<string, string> | undefined = undefined;
       if (this.bodyType === 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
-         formDataFinal = {};
-         this.formDataFields.forEach(f => {
-            if (f.enabled && f.key) {
-               formDataFinal![f.key] = f.value;
-            }
-         });
-         
-         if (Object.keys(formDataFinal).length === 0) {
-            formDataFinal = undefined;
-         }
+        formDataFinal = {};
+        this.formDataFields.forEach(f => {
+          if (f.enabled && f.key) {
+            formDataFinal![f.key] = f.value;
+          }
+        });
+
+        if (Object.keys(formDataFinal).length === 0) {
+          formDataFinal = undefined;
+        }
       }
 
       const config: HttpRequestConfig = {
@@ -171,12 +232,12 @@ export class AppComponent implements OnInit {
       };
 
       this.response = await this.reqService.sendRequest(config);
-      
+
       if (!this.response.error) {
-         this.historyService.addHistory(config);
-         this.loadHistory();
+        this.historyService.addHistory(config);
+        this.loadHistory();
       } else {
-         this.snackBar.open(`Error: ${this.response.error}`, 'Close', { duration: 5000 });
+        this.snackBar.open(`Error: ${this.response.error}`, 'Close', { duration: 5000 });
       }
 
     } catch (err: any) {
@@ -188,77 +249,78 @@ export class AppComponent implements OnInit {
 
   loadHistoryItem(item: HistoryItem) {
     this.method = item.config.method;
-    
+    this.selectedItem = item.id;
+
     // Strip query parameters back to pure URL
     try {
-       const u = new URL(item.config.url);
-       u.search = '';
-       this.url = u.toString();
-       
-       // Populate UI query parameters dynamically from the original saved URL
-       const originalUrl = new URL(item.config.url);
-       this.queryParams = [];
-       originalUrl.searchParams.forEach((val, key) => {
-          this.queryParams.push({key, value: val, enabled: true});
-       });
+      const u = new URL(item.config.url);
+      u.search = '';
+      this.url = u.toString();
+
+      // Populate UI query parameters dynamically from the original saved URL
+      const originalUrl = new URL(item.config.url);
+      this.queryParams = [];
+      originalUrl.searchParams.forEach((val, key) => {
+        this.queryParams.push({ key, value: val, enabled: true });
+      });
     } catch {
-       this.url = item.config.url;
-       this.queryParams = [];
+      this.url = item.config.url;
+      this.queryParams = [];
     }
     if (this.queryParams.length === 0) this.queryParams.push({ key: '', value: '', enabled: true });
 
     // Populate Headers
     this.headers = [];
     if (item.config.headers) {
-       for (const [key, value] of Object.entries(item.config.headers)) {
-          // ignore auto-injected headers to avoid polluting UI
-          if (key.toLowerCase() !== 'content-length' && key.toLowerCase() !== 'content-type') {
-             this.headers.push({ key, value: String(value), enabled: true });
-          } else if (key.toLowerCase() === 'content-type' && String(value) !== 'application/json' && !String(value).includes('multipart/form-data')) {
-             this.headers.push({ key, value: String(value), enabled: true });
-          }
-       }
+      for (const [key, value] of Object.entries(item.config.headers)) {
+        // ignore auto-injected headers to avoid polluting UI
+        if (key.toLowerCase() !== 'content-length' && key.toLowerCase() !== 'content-type') {
+          this.headers.push({ key, value: String(value), enabled: true });
+        } else if (key.toLowerCase() === 'content-type' && String(value) !== 'application/json' && !String(value).includes('multipart/form-data')) {
+          this.headers.push({ key, value: String(value), enabled: true });
+        }
+      }
     }
     if (this.headers.length === 0) this.headers.push({ key: '', value: '', enabled: true });
-    
+
     // Populate Body
     if (item.config.formDataPayload) {
-       this.bodyType = 'Form-Data';
-       this.formDataFields = [];
-       for (const [key, value] of Object.entries(item.config.formDataPayload)) {
-           this.formDataFields.push({ key, value: String(value), enabled: true });
-       }
-       if (this.formDataFields.length === 0) this.formDataFields.push({ key: '', value: '', enabled: true });
+      this.bodyType = 'Form-Data';
+      this.formDataFields = [];
+      for (const [key, value] of Object.entries(item.config.formDataPayload)) {
+        this.formDataFields.push({ key, value: String(value), enabled: true });
+      }
+      if (this.formDataFields.length === 0) this.formDataFields.push({ key: '', value: '', enabled: true });
     } else if (item.config.body) {
-       this.bodyContent = item.config.body;
-       try {
-         JSON.parse(this.bodyContent);
-         this.bodyType = 'JSON';
-       } catch {
-         this.bodyType = 'Text';
-       }
-       this.formDataFields = [{ key: '', value: '', enabled: true }];
+      this.bodyContent = item.config.body;
+      try {
+        JSON.parse(this.bodyContent);
+        this.bodyType = 'JSON';
+      } catch {
+        this.bodyType = 'Text';
+      }
+      this.formDataFields = [{ key: '', value: '', enabled: true }];
     } else {
-       this.bodyType = 'JSON';
-       this.bodyContent = '{\n\n}';
-       this.formDataFields = [{ key: '', value: '', enabled: true }];
+      this.bodyType = 'JSON';
+      this.bodyContent = '{\n\n}';
+      this.formDataFields = [{ key: '', value: '', enabled: true }];
     }
 
     this.response = null;
     this.validateJson();
   }
-  
+
   getResponseBodyDisplay(): string {
-     if (!this.response || !this.response.body) return '';
-     try {
-       // Pretty print if JSON
-       const obj = JSON.parse(this.response.body);
-       return JSON.stringify(obj, null, 2);
-     } catch (e) {
-       return this.response.body;
-     }
+    if (!this.response || !this.response.body) return '';
+    try {
+      // Pretty print if JSON
+      const obj = JSON.parse(this.response.body);
+      return JSON.stringify(obj, null, 2);
+    } catch (e) {
+      return this.response.body;
+    }
   }
-  
+
   downloadBinary() {
     if (!this.response || !this.response.body) return;
     const blob = new Blob([this.response.body]);

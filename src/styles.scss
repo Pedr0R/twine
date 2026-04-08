@@ -2,36 +2,40 @@
 
 /* Vercel-Dark Design System Overrides */
 :root {
-  --bg-tertiary: #000000; /* Server Bar */
-  --bg-secondary: #09090b; /* Sidebar */
-  --bg-primary: #09090b; /* Chat Area */
+  --bg-tertiary: #000000;
+  /* Server Bar */
+  --bg-secondary: #0e0e0e;
+  /* Sidebar */
+  --bg-primary: #09090b;
+  /* Chat Area */
   --bg-floating: #18181b;
-  
+
   --interactive-normal: #a1a1aa;
   --interactive-hover: #f4f4f5;
   --interactive-active: #ffffff;
   --interactive-muted: #3f3f46;
-  
+
   --text-normal: #fafafa;
   --text-muted: #a1a1aa;
-  
+
   --channeltextarea-background: transparent;
   --input-border: #27272a;
-  
+
   --background-modifier-hover: #18181b;
   --background-modifier-active: #27272a;
   --background-modifier-selected: #27272a;
-  
+
   /* Vercel Action colors (Black & White minimal) */
   --brand-experiment: #fafafa;
   --brand-experiment-hover: #e4e4e7;
   --brand-text: #09090b;
-  
+
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -42,7 +46,16 @@ html, body {
   user-select: none;
 }
 
-a, p, span, h1, h2, h3, h4, h5, h6, div {
+a,
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+div {
   cursor: default;
 }
 
@@ -51,13 +64,16 @@ a, p, span, h1, h2, h3, h4, h5, h6, div {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--input-border);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-corner {
   background: transparent;
 }

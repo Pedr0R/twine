@@ -2,20 +2,26 @@
 
   <!-- 1. Server Bar -->
   <nav class="server-bar">
-    <div class="server-icon home-icon active">
-      <mat-icon>code</mat-icon>
+    <div class="app-logo">
+      <img src="assets/cattp-logo.png" alt="Logo">
     </div>
     <div class="server-separator"></div>
+    <div class="server-icon home-icon active" title="Requests">
+      <mat-icon>code</mat-icon>
+    </div>
     <div class="server-icon" title="Collections (Coming Soon)">
       <mat-icon>folder</mat-icon>
     </div>
-    <div class="server-icon" title="Settings">
+    <div class="server-icon" title="Settings (Coming Soon)">
       <mat-icon>settings</mat-icon>
+    </div>
+    <div class="server-icon user-icon" title="User (Coming Soon)">
+      <mat-icon>person</mat-icon>
     </div>
   </nav>
 
   <!-- 2. Channel Sidebar (History) -->
-  <aside class="channels-sidebar">
+  <aside class="channels-sidebar" [style.width.px]="sidebarWidth">
     <header class="sidebar-header">
       <h3 class="server-name">CATTP</h3>
       <mat-icon class="header-icon">expand_more</mat-icon>
@@ -27,10 +33,8 @@
         <span>EXECUTION HISTORY</span>
       </div>
 
-      <div *ngFor="let item of history" 
-           class="channel-item"
-           [class.active]="item.config.url === url && item.config.method === method"
-           (click)="loadHistoryItem(item)">
+      <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
+        (click)="loadHistoryItem(item)">
         <mat-icon class="hash-icon">tag</mat-icon>
         <div class="channel-name" [title]="item.config.url">
           <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
@@ -42,43 +46,29 @@
         No past requests found.
       </div>
     </div>
-    
-    <!-- User panel at bottom -->
-    <div class="user-panel">
-      <div class="avatar"></div>
-      <div class="user-info">
-        <div class="username">Developer</div>
-        <div class="status">Online</div>
-      </div>
-      <div class="user-controls">
-        <mat-icon>mic</mat-icon>
-        <mat-icon>headset</mat-icon>
-        <mat-icon>settings</mat-icon>
-      </div>
-    </div>
+
+    <div class="sidebar-resizer" (mousedown)="startResize($event)"></div>
   </aside>
 
   <!-- 3. Main Chat Area -->
   <main class="chat-area">
-    
+
     <!-- Top Nav / Request Control -->
     <header class="chat-header">
       <div class="header-title">
         <mat-icon class="hash-icon">tag</mat-icon>
         <h3>new-request</h3>
       </div>
-      
+
       <div class="request-bar">
         <select class="discord-dropdown" [(ngModel)]="method">
           <option *ngFor="let m of methods" [value]="m">{{m}}</option>
         </select>
-        
-        <input type="text" class="discord-input main-url-input" 
-               placeholder="Enter request URL (e.g. https://api.example.com)..." 
-               [(ngModel)]="url"
-               (ngModelChange)="onUrlChange()"
-               spellcheck="false">
-               
+
+        <input type="text" class="discord-input main-url-input"
+          placeholder="Enter request URL (e.g. https://api.example.com)..." [(ngModel)]="url"
+          (ngModelChange)="onUrlChange()" spellcheck="false">
+
         <button class="discord-btn-primary" [disabled]="!canSend" (click)="sendRequest()">
           <span *ngIf="!isLoading">Send Request</span>
           <span *ngIf="isLoading" class="pulse">Sending...</span>
@@ -88,25 +78,28 @@
 
     <!-- Main Content Divider -->
     <div class="chat-content-split">
-      
+
       <!-- Split Left: Settings / Config Panel -->
       <div class="config-panel">
         <mat-tab-group class="discord-tabs" mat-stretch-tabs="false" animationDuration="0ms">
-          
+
           <mat-tab label="Query Params">
             <div class="tab-pane">
               <div *ngFor="let p of queryParams; let i = index" class="kv-row">
-                <input type="checkbox" class="discord-checkbox" [(ngModel)]="p.enabled">
-                <input type="text" class="discord-input" placeholder="Key" [(ngModel)]="p.key">
-                <input type="text" class="discord-input" placeholder="Value" [(ngModel)]="p.value">
+                <input type="checkbox" class="discord-checkbox" [(ngModel)]="p.enabled"
+                  (ngModelChange)="updateUrlFromParams()">
+                <input type="text" class="discord-input" placeholder="Key" [(ngModel)]="p.key"
+                  (ngModelChange)="updateUrlFromParams()">
+                <input type="text" class="discord-input" placeholder="Value" [(ngModel)]="p.value"
+                  (ngModelChange)="updateUrlFromParams()">
                 <button class="icon-btn danger" (click)="removeQueryParam(i)"><mat-icon>close</mat-icon></button>
               </div>
               <button class="discord-btn-secondary add-btn" (click)="addQueryParam()">Add Parameter</button>
             </div>
           </mat-tab>
-          
+
           <mat-tab label="Headers">
-             <div class="tab-pane">
+            <div class="tab-pane">
               <div *ngFor="let h of headers; let i = index" class="kv-row">
                 <input type="checkbox" class="discord-checkbox" [(ngModel)]="h.enabled">
                 <input type="text" class="discord-input" placeholder="Key" [(ngModel)]="h.key">
@@ -116,7 +109,7 @@
               <button class="discord-btn-secondary add-btn" (click)="addHeader()">Add Header</button>
             </div>
           </mat-tab>
-          
+
           <mat-tab label="Body" [disabled]="['GET', 'OPTIONS', 'DELETE'].includes(method)">
             <div class="tab-pane body-tabpane">
               <div class="radio-group discord-radio-group">
@@ -132,51 +125,50 @@
               </div>
 
               <!-- JSON/Text Editor -->
-              <textarea *ngIf="bodyType !== 'Form-Data'"
-                        class="discord-input code-editor" 
-                        [class.invalid-json]="!isValidJson"
-                        [(ngModel)]="bodyContent" 
-                        (input)="validateJson()"
-                        spellcheck="false"></textarea>
-               <div *ngIf="bodyType === 'JSON' && !isValidJson" class="error-text">Syntax Error: Invalid JSON Format</div>
+              <textarea *ngIf="bodyType !== 'Form-Data'" class="discord-input code-editor"
+                [class.invalid-json]="!isValidJson" [(ngModel)]="bodyContent" (input)="validateJson()"
+                spellcheck="false"></textarea>
+              <div *ngIf="bodyType === 'JSON' && !isValidJson" class="error-text">Syntax Error: Invalid JSON Format
+              </div>
 
-               <!-- Form-Data Editor -->
-               <div *ngIf="bodyType === 'Form-Data'" class="form-data-container">
-                 <div *ngFor="let fd of formDataFields; let i = index" class="kv-row">
-                    <input type="checkbox" class="discord-checkbox" [(ngModel)]="fd.enabled">
-                    <input type="text" class="discord-input" placeholder="Field Key" [(ngModel)]="fd.key">
-                    <input type="text" class="discord-input" placeholder="Field Value" [(ngModel)]="fd.value">
-                    <button class="icon-btn danger" (click)="removeFormDataField(i)"><mat-icon>close</mat-icon></button>
-                  </div>
-                  <button class="discord-btn-secondary add-btn" (click)="addFormDataField()">Add Form-Data Field</button>
-               </div>
+              <!-- Form-Data Editor -->
+              <div *ngIf="bodyType === 'Form-Data'" class="form-data-container">
+                <div *ngFor="let fd of formDataFields; let i = index" class="kv-row">
+                  <input type="checkbox" class="discord-checkbox" [(ngModel)]="fd.enabled">
+                  <input type="text" class="discord-input" placeholder="Field Key" [(ngModel)]="fd.key">
+                  <input type="text" class="discord-input" placeholder="Field Value" [(ngModel)]="fd.value">
+                  <button class="icon-btn danger" (click)="removeFormDataField(i)"><mat-icon>close</mat-icon></button>
+                </div>
+                <button class="discord-btn-secondary add-btn" (click)="addFormDataField()">Add Form-Data Field</button>
+              </div>
             </div>
           </mat-tab>
-          
+
         </mat-tab-group>
       </div>
 
       <!-- Split Right: Response Panel (styled as a sleek terminal/code block) -->
       <div class="response-panel">
         <div class="response-header">
-           <h3 class="response-title">RESPONSE</h3>
-           <div class="response-metrics" *ngIf="response">
-             <span [class.error]="response.statusCode && response.statusCode >= 400" class="metric status-metric">
-                <span class="dot" [style.background-color]="response.statusCode && response.statusCode < 400 ? '#43b581' : '#f04747'"></span>
-                {{response.statusCode || 'ERROR'}}
-             </span>
-             <span class="metric"><mat-icon>schedule</mat-icon> {{response.time}}ms</span>
-             <span class="metric"><mat-icon>storage</mat-icon> {{response.size}}B</span>
-           </div>
+          <h3 class="response-title">RESPONSE</h3>
+          <div class="response-metrics" *ngIf="response">
+            <span [class.error]="response.statusCode && response.statusCode >= 400" class="metric status-metric">
+              <span class="dot"
+                [style.background-color]="response.statusCode && response.statusCode < 400 ? '#43b581' : '#f04747'"></span>
+              {{response.statusCode || 'ERROR'}}
+            </span>
+            <span class="metric"><mat-icon>schedule</mat-icon> {{response.time}}ms</span>
+            <span class="metric"><mat-icon>storage</mat-icon> {{response.size}}B</span>
+          </div>
         </div>
 
         <div class="response-content">
           <div *ngIf="!response && !isLoading" class="empty-chat">
-             <div class="empty-icon"><mat-icon>send</mat-icon></div>
-             <h3>Ready to Send</h3>
-             <p>Configure your payload and hit send to display the response payload here.</p>
+            <div class="empty-icon"><mat-icon>send</mat-icon></div>
+            <h3>Ready to Send</h3>
+            <p>Configure your payload and hit send to display the response payload here.</p>
           </div>
-          
+
           <div *ngIf="isLoading" class="empty-chat loading">
             <div class="discord-spinner"></div>
             <p>Awaiting translation...</p>
@@ -186,7 +178,7 @@
             <div *ngIf="response.error" class="error-msg">
               <mat-icon>error_outline</mat-icon> {{response.error}}
             </div>
-            
+
             <div *ngIf="response.body">
               <div class="editor-toolbar">
                 <span class="lang-label">JSON</span>
