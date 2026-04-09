@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Twine - Motor de Requisições & Teste de API</title>
+    <meta name="description"
+        content="Twine é um motor de requisições moderno e leve para teste de APIs. Suporte a coleções, autenticação, histórico e importação Hoppscotch.">
     <!-- Modern Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,6 +39,7 @@
         <!-- Hero Section -->
         <section class="hero">
             <div class="hero-content">
+                <div class="version-badge fade-up">v1.1.1 — agora com Coleções & Auth</div>
                 <h1 class="fade-up">Motor de Requisições<br>Moderno & Leve.</h1>
                 <p class="fade-up delay-1">Uma ferramenta de teste de API projetada para otimizar fluxos de trabalho.
                     Interface reativa para gerenciar integrações e validar endpoints sem atrito de CORS.</p>
@@ -68,6 +71,7 @@
         <section id="features" class="features">
             <div class="features-grid">
 
+                <!-- Existing: Dynamic Config -->
                 <div class="feature-card reveal">
                     <div class="icon-wrapper">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -80,6 +84,7 @@
                         suas chamadas.</p>
                 </div>
 
+                <!-- Existing: Headers & Params -->
                 <div class="feature-card reveal delay-1">
                     <div class="icon-wrapper">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -94,6 +99,7 @@
                     </p>
                 </div>
 
+                <!-- Existing: Real-time Monitoring -->
                 <div class="feature-card reveal delay-2">
                     <div class="icon-wrapper">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -106,6 +112,48 @@
                     </p>
                 </div>
 
+                <!-- NEW: Auth Headers -->
+                <div class="feature-card reveal">
+                    <div class="icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <h3>Autenticação Integrada <span class="badge-new">Novo</span></h3>
+                    <p>Configure autenticação Bearer Token, Basic Auth ou API Key diretamente na aba Auth, sem precisar
+                        montar headers manualmente.</p>
+                </div>
+
+                <!-- NEW: Collections -->
+                <div class="feature-card reveal delay-1">
+                    <div class="icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3>Coleções <span class="badge-new">Novo</span></h3>
+                    <p>Organize requisições em coleções e pastas. Salve, renomeie, exporte e importe grupos de endpoints
+                        com um clique.</p>
+                </div>
+
+                <!-- NEW: Hoppscotch Import/Export -->
+                <div class="feature-card reveal delay-2">
+                    <div class="icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                            <path d="M9 18H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"></path>
+                        </svg>
+                    </div>
+                    <h3>Compatível com Postman e Hoppscotch <span class="badge-new">Novo</span></h3>
+                    <p>Importe e exporte coleções no formato JSON. Traga seus workspaces existentes sem
+                        reconfiguração.</p>
+                </div>
             </div>
         </section>
     </main>

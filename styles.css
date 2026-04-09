@@ -156,6 +156,39 @@ h1, h2, h3 {
     gap: 16px;
 }
 
+/* Version Badge */
+.version-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    margin-bottom: 18px;
+    letter-spacing: 0.02em;
+}
+
+/* "Novo" badge inside feature card titles */
+.badge-new {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--brand-color);
+    color: var(--bg-base);
+    vertical-align: middle;
+    margin-left: 8px;
+    position: relative;
+    top: -1px;
+}
+
 /* Features Grid */
 .features {
     margin: 0;
@@ -164,7 +197,7 @@ h1, h2, h3 {
 
 .features-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
 }
 .feature-card {
@@ -172,10 +205,11 @@ h1, h2, h3 {
     padding: 24px 20px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, transform 0.2s ease;
 }
 .feature-card:hover {
     border-color: var(--text-muted);
+    transform: translateY(-2px);
 }
 .icon-wrapper {
     font-size: 1.3rem;
@@ -185,6 +219,10 @@ h1, h2, h3 {
 .feature-card h3 {
     font-size: 1.05rem;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 .feature-card p {
     color: var(--text-muted);
@@ -263,6 +301,7 @@ footer {
         margin-top: 140px;
         gap: 60px;
     }
+    /* 2-col grid still holds on medium screens */
     .features-grid { grid-template-columns: repeat(2, 1fr); }
     .hero h1 { font-size: 2.8rem; }
 }
@@ -270,4 +309,5 @@ footer {
     .features-grid { grid-template-columns: 1fr; }
     .hero-buttons { flex-direction: column; }
     .nav-links { display: none; }
+    .version-badge { font-size: 0.72rem; }
 }
