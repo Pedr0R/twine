@@ -1332,14 +1332,36 @@
   width: 100%;
 }
 
+/* Display div shown when input is inactive — renders urlParts with span highlights */
+.url-display {
+  cursor: text;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  color: var(--text-normal);
+
+  span {
+    line-height: 1;
+  }
+}
+
+.url-placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
 /* Colored token spans rendered inside the backdrop */
 .env-token {
   border-radius: 3px;
   padding: 1px 2px;
 
   &.resolved {
-    color: #f0a500;
-    background: rgba(240, 165, 0, 0.18);
+    color: #74f000;
+    background: rgba(96, 240, 0, 0.18);
   }
 
   &.unresolved {
@@ -1354,7 +1376,8 @@
    ================================== */
 
 .env-token-tooltip {
-  position: fixed;
+  position: absolute;
+  top: 65px;
   z-index: 9999;
   transform: translateX(-50%);
   pointer-events: none;
@@ -1362,6 +1385,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+
+  height: fit-content;
+  width: fit-content;
+  align-self: flex-start;
 
   background: #111214;
   border: 1px solid #3a3d44;
@@ -1371,16 +1398,16 @@
   white-space: nowrap;
   animation: tooltipFadeIn 0.12s ease;
 
-  /* Arrow pointing down */
+  /* Arrow pointing up */
   &::after {
     content: '';
     position: absolute;
-    bottom: -5px;
+    top: -5px;
     left: 50%;
     transform: translateX(-50%);
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid #3a3d44;
+    border-bottom: 5px solid #3a3d44;
   }
 }
 
@@ -1400,7 +1427,7 @@
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 600;
-  color: #f0a500;
+  color: #74f000;
 }
 
 .tooltip-sep-icon {

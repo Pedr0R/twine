@@ -166,8 +166,16 @@
             *ngIf="inputActivated === true" (ngModelChange)="onUrlChange()" spellcheck="false" #urlInput
             (scroll)="onUrlInputScroll()" (blur)="toggleInput()" (mousemove)="onUrlMouseMove($event)"
             (mouseleave)="onUrlMouseLeave()">
-          <div class="discord-input main-url-input" *ngIf="inputActivated === false" (click)="toggleInput()">
-            {{url || 'Enter request URL — supports &lt;&lt;variables&gt;&gt;...'}}
+          <div class="discord-input main-url-input url-display" *ngIf="inputActivated === false" (click)="toggleInput()"
+            (mouseleave)="onUrlMouseLeave()">
+            <ng-container *ngIf="urlParts.length > 0; else urlPlaceholder">
+              <span *ngFor="let part of urlParts" [class.env-token]="part.isToken"
+                [class.resolved]="part.isToken && part.resolved" [class.unresolved]="part.isToken && !part.resolved"
+                (mouseenter)="part.isToken && onTokenSpanEnter($event, part)">{{ part.text }}</span>
+            </ng-container>
+            <ng-template #urlPlaceholder>
+              <span class="url-placeholder">Enter request URL — supports &lt;&lt;variables&gt;&gt;...</span>
+            </ng-template>
           </div>
         </div>
 

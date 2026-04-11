@@ -23,6 +23,13 @@ interface KeyValuePair {
   enabled: boolean;
 }
 
+interface UrlPart {
+  text: string;
+  isToken: boolean;
+  resolved: boolean;
+  value: string | undefined;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -92,6 +99,30 @@ export class AppComponent implements OnInit {
 
   get urlHasTokens(): boolean {
     return this.envService.hasTokens(this.url);
+  }
+
+  /** Splits the URL into plain-text and <<token>> chunks for the display div. */
+  get urlParts(): UrlPart[] {
+    if (!this.url) return [];
+    const vars = this.envService.getVariables().filter(v => v.enabled && v.key);
+    const varMap = new Map(vars.map(v => [v.key, v.value]));
+    const parts: UrlPart[] = [];
+    const regex = /<<([^>]+)>>/g;
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(this.url)) !== null) {
+      if (match.index > last) {
+        parts.push({ text: this.url.slice(last, match.index), isToken: false, resolved: true, value: undefined });
+      }
+      const key = match[1];
+      const value = varMap.get(key);
+      parts.push({ text: `<<${key}>>`, isToken: true, resolved: value !== undefined, value });
+      last = match.index + match[0].length;
+    }
+    if (last < this.url.length) {
+      parts.push({ text: this.url.slice(last), isToken: false, resolved: true, value: undefined });
+    }
+    return parts;
   }
 
   get currentRequestName(): string {
@@ -352,6 +383,17 @@ export class AppComponent implements OnInit {
 
   onUrlMouseLeave(): void {
     this.tokenTooltip = null;
+  }
+
+  onTokenSpanEnter(event: MouseEvent, part: UrlPart): void {
+    const el = event.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    this.tokenTooltip = {
+      key: part.text.replace(/^<<|>>$/g, ''), // strip << and >>
+      value: part.value ?? null,
+      x: rect.left + rect.width / 2,
+      y: rect.top
+    };
   }
 
   toggleInput(): void {
