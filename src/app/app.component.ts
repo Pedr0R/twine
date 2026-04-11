@@ -12,30 +12,20 @@ import { HistoryService, HistoryItem } from './core/services/history.service';
 import { RequisitionService, Requisition } from './core/services/requisition.service';
 import { CollectionService, Collection, CollectionRequest, AuthConfig } from './core/services/collection.service';
 import { EnvironmentService } from './core/services/environment.service';
+import { KeyValuePair } from './core/models/request.models';
 import { SaveRequisitionDialogComponent } from './components/save-requisition-dialog/save-requisition-dialog.component';
 import { CollectionDialogComponent } from './components/collection-dialog/collection-dialog.component';
 import { SaveToCollectionDialogComponent, SaveToCollectionDialogResult } from './components/save-to-collection-dialog/save-to-collection-dialog.component';
 import { EnvVariablesDialogComponent } from './components/env-variables-dialog/env-variables-dialog.component';
-
-interface KeyValuePair {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface UrlPart {
-  text: string;
-  isToken: boolean;
-  resolved: boolean;
-  value: string | undefined;
-}
+import { UrlBarComponent } from './components/url-bar/url-bar.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTabsModule, MatIconModule,
-    MatSnackBarModule, MatDialogModule, MatMenuModule
+    MatSnackBarModule, MatDialogModule, MatMenuModule,
+    UrlBarComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -92,39 +82,6 @@ export class AppComponent implements OnInit {
     return this.envService.getVariables().filter(v => v.enabled && v.key).length;
   }
 
-  /** Resolved URL preview — only shown when the raw URL contains {{tokens}} */
-  get resolvedUrl(): string {
-    return this.envService.resolve(this.url);
-  }
-
-  get urlHasTokens(): boolean {
-    return this.envService.hasTokens(this.url);
-  }
-
-  /** Splits the URL into plain-text and <<token>> chunks for the display div. */
-  get urlParts(): UrlPart[] {
-    if (!this.url) return [];
-    const vars = this.envService.getVariables().filter(v => v.enabled && v.key);
-    const varMap = new Map(vars.map(v => [v.key, v.value]));
-    const parts: UrlPart[] = [];
-    const regex = /<<([^>]+)>>/g;
-    let last = 0;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(this.url)) !== null) {
-      if (match.index > last) {
-        parts.push({ text: this.url.slice(last, match.index), isToken: false, resolved: true, value: undefined });
-      }
-      const key = match[1];
-      const value = varMap.get(key);
-      parts.push({ text: `<<${key}>>`, isToken: true, resolved: value !== undefined, value });
-      last = match.index + match[0].length;
-    }
-    if (last < this.url.length) {
-      parts.push({ text: this.url.slice(last), isToken: false, resolved: true, value: undefined });
-    }
-    return parts;
-  }
-
   get currentRequestName(): string {
     const req = this.savedRequests.find(r => r.id === this.selectedItem);
     return req ? req.name : 'new-request';
@@ -142,14 +99,6 @@ export class AppComponent implements OnInit {
   activeContextReq: Requisition | null = null;
 
   @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
-  @ViewChild('urlInput') urlInputRef!: ElementRef<HTMLInputElement>;
-  @ViewChild('urlBackdrop') urlBackdropRef!: ElementRef<HTMLDivElement>;
-
-  // URL highlight state
-  highlightedUrl: SafeHtml = '';
-  tokenRanges: Array<{ start: number; end: number; key: string; value: string | undefined }> = [];
-  tokenTooltip: { key: string; value: string | null; x: number; y: number } | null = null;
-  private _measureCanvas: HTMLCanvasElement | null = null;
 
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
@@ -186,7 +135,6 @@ export class AppComponent implements OnInit {
     this.loadHistory();
     this.loadRequisitions();
     this.loadCollections();
-    this.highlightUrl();
   }
 
   loadRequisitions() {
@@ -215,7 +163,6 @@ export class AppComponent implements OnInit {
     } catch {
       // Ignore invalid intermediate URLs
     }
-    this.highlightUrl();
   }
 
   onMethodChange() {
@@ -300,122 +247,58 @@ export class AppComponent implements OnInit {
     }
   }
 
-  // ── URL Token Highlighting ─────────────────────────────────────────────────
-
-  highlightUrl(): void {
-    if (!this.url) {
-      this.highlightedUrl = this.sanitizer.bypassSecurityTrustHtml('');
-      this.tokenRanges = [];
-      return;
-    }
-
-    const vars = this.envService.getVariables().filter(v => v.enabled && v.key);
-    const varMap = new Map(vars.map(v => [v.key, v.value]));
-    const ranges: typeof this.tokenRanges = [];
-
-    const esc = (s: string) =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const escAttr = (s: string) =>
-      s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-
-    let html = '';
-    let last = 0;
-    const regex = /<<([^>]+)>>/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(this.url)) !== null) {
-      html += esc(this.url.slice(last, match.index));
-      const key = match[1];
-      const value = varMap.get(key);
-      const cls = value !== undefined ? 'env-token resolved' : 'env-token unresolved';
-      const displayVal = value !== undefined ? escAttr(value) : '(not defined)';
-      html += `<span class="${cls}" data-value="${displayVal}">&lt;&lt;${esc(key)}&gt;&gt;</span>`;
-      ranges.push({ start: match.index, end: match.index + match[0].length, key, value });
-      last = match.index + match[0].length;
-    }
-    html += esc(this.url.slice(last));
-
-    this.tokenRanges = ranges;
-    this.highlightedUrl = this.sanitizer.bypassSecurityTrustHtml(html);
-  }
-
-  onUrlInputScroll(): void {
-    if (this.urlBackdropRef) {
-      this.urlBackdropRef.nativeElement.scrollLeft = this.urlInputRef.nativeElement.scrollLeft;
-    }
-  }
-
-  onUrlMouseMove(event: MouseEvent): void {
-    if (this.tokenRanges.length === 0) {
-      this.tokenTooltip = null;
-      return;
-    }
-    const input = this.urlInputRef.nativeElement;
-    const rect = input.getBoundingClientRect();
-    const relX = event.clientX - rect.left + input.scrollLeft;
-
-    if (!this._measureCanvas) this._measureCanvas = document.createElement('canvas');
-    const ctx = this._measureCanvas.getContext('2d')!;
-    const style = window.getComputedStyle(input);
-    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    const paddingLeft = parseFloat(style.paddingLeft);
-
-    let charIdx = this.url.length;
-    for (let i = 0; i <= this.url.length; i++) {
-      if (ctx.measureText(this.url.slice(0, i)).width + paddingLeft >= relX) {
-        charIdx = i;
-        break;
-      }
-    }
-
-    const token = this.tokenRanges.find(t => charIdx >= t.start && charIdx < t.end);
-    if (token) {
-      this.tokenTooltip = {
-        key: token.key,
-        value: token.value ?? null,
-        x: event.clientX,
-        y: rect.top
-      };
-    } else {
-      this.tokenTooltip = null;
-    }
-  }
-
-  onUrlMouseLeave(): void {
-    this.tokenTooltip = null;
-  }
-
-  onTokenSpanEnter(event: MouseEvent, part: UrlPart): void {
-    const el = event.currentTarget as HTMLElement;
-    const rect = el.getBoundingClientRect();
-    this.tokenTooltip = {
-      key: part.text.replace(/^<<|>>$/g, ''), // strip << and >>
-      value: part.value ?? null,
-      x: rect.left + rect.width / 2,
-      y: rect.top
-    };
-  }
-
-  toggleInput(): void {
-    if (this.inputActivated === true) {
-      this.inputActivated = false;
-      this.urlInputRef.nativeElement.blur();
-    }
-    else {
-      this.inputActivated = true;
-      setTimeout(() => this.urlInputRef.nativeElement.focus(), 0);
-    }
-
-  }
-
   get isValidUrl(): boolean {
-    // const resolved = this.envService.resolve(this.url);
-    // return resolved.startsWith('http://') || resolved.startsWith('https://');
-    return true;
+    const resolved = this.envService.resolve(this.url);
+    return resolved.startsWith('http://') || resolved.startsWith('https://');
   }
 
   get canSend(): boolean {
     return this.isValidUrl && this.isValidJson && !this.isLoading;
+  }
+
+  /**
+   * Builds a reusable configuration object from the current UI state.
+   */
+  private buildRequestConfig(): HttpRequestConfig {
+    const finalHeaders: Record<string, string> = {};
+
+    // 1. Regular Headers
+    this.headers.forEach(h => {
+      if (h.enabled && h.key) {
+        finalHeaders[h.key] = h.value;
+      }
+    });
+
+    // 2. Body-based Headers
+    if (this.bodyType === 'JSON' && this.bodyContent && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
+      if (!Object.keys(finalHeaders).find(k => k.toLowerCase() === 'content-type')) {
+        finalHeaders['Content-Type'] = 'application/json';
+      }
+    }
+
+    // 3. Form-Data Payload
+    let formDataFinal: Record<string, string> | undefined = undefined;
+    if (this.bodyType === 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
+      formDataFinal = {};
+      this.formDataFields.forEach(f => {
+        if (f.enabled && f.key) {
+          formDataFinal![f.key] = f.value;
+        }
+      });
+      if (Object.keys(formDataFinal).length === 0) {
+        formDataFinal = undefined;
+      }
+    }
+
+    return {
+      method: this.method,
+      url: this.url,
+      headers: Object.keys(finalHeaders).length > 0 ? finalHeaders : undefined,
+      body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim()
+        ? this.bodyContent
+        : undefined,
+      formDataPayload: formDataFinal
+    };
   }
 
   openEnvDialog(): void {
@@ -429,7 +312,6 @@ export class AppComponent implements OnInit {
         this.envService.setVariables(result);
         const count = result.filter((v: any) => v.enabled && v.key).length;
         this.snackBar.open(`Environment: ${count} variable(s) saved.`, 'Close', { duration: 2000 });
-        this.highlightUrl(); // refresh highlights with new variable values
       }
     });
   }
@@ -542,41 +424,7 @@ export class AppComponent implements OnInit {
 
   createNewRequisition() {
     this.updateUrlFromParams();
-
-    const finalHeaders: Record<string, string> = {};
-    this.headers.forEach(h => {
-      if (h.enabled && h.key) {
-        finalHeaders[h.key] = h.value;
-      }
-    });
-
-    if (this.bodyType === 'JSON' && this.bodyContent && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
-      if (!Object.keys(finalHeaders).find(k => k.toLowerCase() === 'content-type')) {
-        finalHeaders['Content-Type'] = 'application/json';
-      }
-    }
-
-    let formDataFinal: Record<string, string> | undefined = undefined;
-    if (this.bodyType === 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method)) {
-      formDataFinal = {};
-      this.formDataFields.forEach(f => {
-        if (f.enabled && f.key) {
-          formDataFinal![f.key] = f.value;
-        }
-      });
-      if (Object.keys(formDataFinal).length === 0) {
-        formDataFinal = undefined;
-      }
-    }
-
-    const config: HttpRequestConfig = {
-      method: this.method,
-      url: this.url,
-      headers: finalHeaders,
-      body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim() ? this.bodyContent : undefined,
-      formDataPayload: formDataFinal
-    };
-
+    const config = this.buildRequestConfig();
     const newReq = this.requisitionService.addRequisition('new-request', '', config);
     this.loadRequisitions();
     this.selectedItem = newReq.id;
@@ -617,7 +465,6 @@ export class AppComponent implements OnInit {
   }
 
   loadRequisition(req: Requisition) {
-    this.selectedItem = req.id;
     const mockHistoryItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
     this.loadHistoryItem(mockHistoryItem);
     this.selectedItem = req.id;
@@ -668,18 +515,8 @@ export class AppComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result: SaveToCollectionDialogResult | undefined) => {
       if (!result) return;
 
-      // Build current config snapshot
-      const finalHeaders: Record<string, string> = {};
-      this.headers.forEach(h => { if (h.enabled && h.key) finalHeaders[h.key] = h.value; });
-      const config: HttpRequestConfig = {
-        method: this.method,
-        url: this.url,
-        headers: Object.keys(finalHeaders).length ? finalHeaders : undefined,
-        body: this.bodyType !== 'Form-Data' && this.bodyContent.trim() ? this.bodyContent : undefined,
-        formDataPayload: this.bodyType === 'Form-Data'
-          ? Object.fromEntries(this.formDataFields.filter(f => f.enabled && f.key).map(f => [f.key, f.value]))
-          : undefined
-      };
+      // Build current config snapshot using common helper
+      const config = this.buildRequestConfig();
 
       // Capture current auth state
       const auth: AuthConfig = {
@@ -883,7 +720,6 @@ export class AppComponent implements OnInit {
 
     this.response = null;
     this.validateJson();
-    this.highlightUrl();
   }
 
   getResponseBodyDisplay(): string {

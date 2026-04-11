@@ -157,27 +157,12 @@
           <option *ngFor="let m of methods" [value]="m">{{m}}</option>
         </select>
 
-        <!-- URL input with variable highlight backdrop -->
-        <div class="url-highlight-wrapper">
-          <div class="url-highlight-backdrop" #urlBackdrop [innerHTML]="highlightedUrl" aria-hidden="true">
-          </div>
-          <input type="text" class="discord-input main-url-input" id="urlInputRef"
-            placeholder="Enter request URL — supports &lt;&lt;variables&gt;&gt;..." [(ngModel)]="url"
-            *ngIf="inputActivated === true" (ngModelChange)="onUrlChange()" spellcheck="false" #urlInput
-            (scroll)="onUrlInputScroll()" (blur)="toggleInput()" (mousemove)="onUrlMouseMove($event)"
-            (mouseleave)="onUrlMouseLeave()">
-          <div class="discord-input main-url-input url-display" *ngIf="inputActivated === false" (click)="toggleInput()"
-            (mouseleave)="onUrlMouseLeave()">
-            <ng-container *ngIf="urlParts.length > 0; else urlPlaceholder">
-              <span *ngFor="let part of urlParts" [class.env-token]="part.isToken"
-                [class.resolved]="part.isToken && part.resolved" [class.unresolved]="part.isToken && !part.resolved"
-                (mouseenter)="part.isToken && onTokenSpanEnter($event, part)">{{ part.text }}</span>
-            </ng-container>
-            <ng-template #urlPlaceholder>
-              <span class="url-placeholder">Enter request URL — supports &lt;&lt;variables&gt;&gt;...</span>
-            </ng-template>
-          </div>
-        </div>
+        <app-url-bar
+          [(url)]="url"
+          [isLoading]="isLoading"
+          (urlChange)="onUrlChange()"
+          (send)="sendRequest()">
+        </app-url-bar>
 
         <button class="discord-btn-secondary outline save-col-btn" (click)="saveCurrentRequestToCollection()"
           title="Save to Collection">
@@ -188,22 +173,6 @@
           <span *ngIf="!isLoading">Send Request</span>
           <span *ngIf="isLoading" class="pulse">Sending...</span>
         </button>
-      </div>
-
-      <!-- Resolved URL preview -->
-      <!-- <div class="resolved-url-bar" *ngIf="urlHasTokens">
-        <mat-icon class="resolved-icon">arrow_forward</mat-icon>
-        <span class="resolved-text">{{ resolvedUrl }}</span>
-      </div> -->
-
-      <!-- Token hover tooltip (fixed position, above everything) -->
-      <div class="env-token-tooltip" *ngIf="tokenTooltip" [style.left.px]="tokenTooltip.x"
-        [style.bottom.px]="tokenTooltip.y">
-        <span class="tooltip-key">&lt;&lt;{{ tokenTooltip.key }}&gt;&gt;</span>
-        <mat-icon class="tooltip-sep-icon">arrow_forward</mat-icon>
-        <span class="tooltip-value" [class.not-defined]="tokenTooltip.value === null">
-          {{ tokenTooltip.value ?? '(not defined)' }}
-        </span>
       </div>
     </header>
 

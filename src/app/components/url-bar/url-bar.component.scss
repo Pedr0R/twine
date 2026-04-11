@@ -1,0 +1,220 @@
+:host {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+/* ==================================
+   URL Token Highlight Backdrop
+   ================================== */
+
+.url-highlight-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+
+  /* Base input appearance for the whole wrapper */
+  background-color: var(--bg-tertiary);
+  /* Dark background to see the border */
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: var(--interactive-active);
+  }
+}
+
+/* Backdrop sits behind the input, renders HTML with colored token spans */
+.url-highlight-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Must exactly match .main-url-input */
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid transparent;
+  /* match input border so text aligns */
+  border-radius: 6px;
+  /* Regular text should be visible — token spans will override with their colors */
+  color: var(--text-normal);
+  box-sizing: border-box;
+}
+
+/* The actual input sits on top, transparent background */
+.main-url-input {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  color: var(--text-normal) !important;
+  /* Hide real text so backdrop shows through */
+  caret-color: var(--text-normal);
+  /* But keep the typing cursor visible */
+  width: 100%;
+  flex: 1;
+  padding: 10px 16px;
+  border: none !important;
+  /* Wrapper handles border */
+  border-radius: 6px;
+  height: 44px;
+  /* Explicit height to match backdrop */
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* Display div shown when input is inactive — renders urlParts with span highlights */
+.url-display {
+  cursor: text;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  color: var(--text-normal);
+  height: 44px;
+  /* Match input height */
+  padding: 10px 16px;
+  /* Match input padding */
+  border: none !important;
+  /* Wrapper handles border */
+  box-sizing: border-box;
+
+  span {
+    line-height: 1;
+  }
+}
+
+.url-placeholder {
+  cursor: text;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* Colored token spans rendered inside the backdrop or display div */
+.env-token {
+  cursor: text;
+  border-radius: 3px;
+  padding: 1px 2px;
+  transition: all 0.2s ease;
+
+  &.resolved {
+    color: #74f000;
+    background: rgba(96, 240, 0, 0.18);
+  }
+
+  &.unresolved {
+    color: #ed4245;
+    background: rgba(237, 66, 69, 0.18);
+    text-decoration: underline wavy #ed4245;
+  }
+}
+
+/* Specific overrides for the BACKDROP to ensure pixel-perfect character alignment */
+.url-highlight-backdrop .env-token {
+  padding: 0;
+  margin: 0;
+  background: rgba(96, 240, 0, 0.1);
+  /* Use box-shadow (inset) to provide visual depth without adding width */
+  box-shadow: 0 0 0 1px rgba(116, 240, 0, 0.1);
+
+  &.unresolved {
+    box-shadow: 0 0 0 1px rgba(237, 66, 69, 0.2);
+  }
+}
+
+
+
+/* ==================================
+   Token Hover Tooltip
+   ================================== */
+
+.env-token-tooltip {
+  position: fixed;
+  /* Use fixed to stay above everything regardless of component nesting */
+  z-index: 9999;
+  transform: translateX(-50%);
+  pointer-events: none;
+  bottom: 0x;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  height: fit-content;
+  width: fit-content;
+  align-self: flex-start;
+
+  background: #111214;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  animation: tooltipFadeIn 0.12s ease;
+
+  /* Arrow pointing up (since tooltip is below) */
+  &::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid #3a3d44;
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltip-key {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5ea11f;
+}
+
+.tooltip-sep-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #72767d;
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #dcddde;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.not-defined {
+    color: #ed4245;
+    font-style: italic;
+  }
+}

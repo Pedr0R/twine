@@ -1,0 +1,30 @@
+<!-- URL input with variable highlight backdrop -->
+<div class="url-highlight-wrapper" (click)="toggleInput()">
+  <input type="text" class="discord-input main-url-input" id="urlInputRef"
+    placeholder="Enter request URL — supports &lt;&lt;variables&gt;&gt;..." [(ngModel)]="url"
+    *ngIf="inputActivated === true" (ngModelChange)="emitUrlChange()" (keydown)="onKeydown($event)" spellcheck="false"
+    #urlInput (scroll)="onUrlInputScroll()" (blur)="toggleInput()" (mousemove)="onUrlMouseMove($event)"
+    (mouseleave)="onUrlMouseLeave()" (click)="toggleInput()">
+  <div class="discord-input main-url-input url-display" *ngIf="inputActivated === false"
+    (mouseleave)=" onUrlMouseLeave()">
+    <ng-container *ngIf="urlParts.length > 0; else urlPlaceholder" (click)="toggleInput()">
+      <span *ngFor="let part of urlParts" [class.env-token]="part.isToken" (click)="toggleInput()"
+        [class.resolved]="part.isToken && part.resolved" [class.unresolved]="part.isToken && !part.resolved"
+        (mouseenter)="part.isToken && onTokenSpanEnter($event, part)">{{ part.text }}</span>
+
+    </ng-container>
+    <ng-template #urlPlaceholder (click)="toggleInput()">
+      <span class="url-placeholder">Enter request URL — supports &lt;&lt;variables&gt;&gt;...</span>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Token hover tooltip (fixed position, above everything) -->
+<div class="env-token-tooltip" *ngIf="tokenTooltip" [style.left.px]="tokenTooltip.x"
+  [style.top.px]="tokenTooltip.y + 15 + 8">
+  <span class="tooltip-key">&lt;&lt;{{ tokenTooltip.key }}&gt;&gt;</span>
+  <mat-icon class="tooltip-sep-icon">arrow_forward</mat-icon>
+  <span class="tooltip-value" [class.not-defined]="tokenTooltip.value === null">
+    {{ tokenTooltip.value ?? '(not defined)' }}
+  </span>
+</div>

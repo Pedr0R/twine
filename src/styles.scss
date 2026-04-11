@@ -104,3 +104,28 @@ div {
   font-size: 20px;
   margin-right: -12px;
 }
+
+/* ==================================
+   Global UI Components
+   ================================== */
+
+.discord-input {
+  background-color: transparent;
+  color: var(--text-normal);
+  border: 1px solid var(--input-border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  font-family: var(--font-mono);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.discord-input:focus {
+  border-color: var(--interactive-active);
+}
+
+.discord-input::placeholder {
+  color: var(--text-muted);
+}
