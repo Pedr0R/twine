@@ -3,11 +3,20 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "npm run electron:dev",
+      "port": 5200,
+      "request": "launch",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
       "name": "ng serve",
       "type": "chrome",
       "request": "launch",
       "preLaunchTask": "npm: start",
-      "url": "http://localhost:4200/"
+      "url": "http://localhost:5200/"
     },
     {
       "name": "ng test",

@@ -33,7 +33,7 @@ function createWindow() {
     );
   }
 
-  mainWindow.removeMenu();
+  // mainWindow.removeMenu();
 
   mainWindow.on('closed', function () {
     mainWindow = null;

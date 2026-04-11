@@ -1,0 +1,217 @@
+/* ── Wrapper ────────────────────────────────────────────────────────────────── */
+.env-dialog {
+  display: flex;
+  flex-direction: column;
+  background: #1e1f22;
+  color: #dcddde;
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 400px;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.env-dialog-header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid #2f3136;
+}
+
+.env-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.env-title-icon {
+  color: #5865f2;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.env-hint {
+  font-size: 0.78rem;
+  color: #72767d;
+
+  code {
+    background: #2f3136;
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #43b581;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+.env-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.env-table-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 32px;
+  gap: 8px;
+  padding: 0 4px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #72767d;
+}
+
+.env-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.env-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+
+  &:hover .row-delete-btn {
+    opacity: 1;
+  }
+}
+
+/* ── Toggle ─────────────────────────────────────────────────────────────────── */
+.col-toggle { display: flex; align-items: center; justify-content: center; }
+
+.toggle-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #72767d;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  padding: 0;
+
+  .toggle-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.15s;
+  }
+
+  &.active {
+    border-color: #43b581;
+    .toggle-dot { background: #43b581; }
+  }
+}
+
+/* ── Inputs ─────────────────────────────────────────────────────────────────── */
+.env-input {
+  width: 100%;
+  background: #2f3136;
+  border: 1px solid #40444b;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #dcddde;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.15s;
+
+  &:focus { border-color: #5865f2; }
+  &::placeholder { color: #72767d; }
+
+  &.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+/* ── Delete button ───────────────────────────────────────────────────────────── */
+.col-action { display: flex; align-items: center; justify-content: center; }
+
+.row-delete-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #72767d;
+  opacity: 0;
+  transition: color 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+  &:hover { color: #ed4245; }
+}
+
+/* ── Add Row ─────────────────────────────────────────────────────────────────── */
+.add-var-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  background: transparent;
+  border: 1px dashed #40444b;
+  border-radius: 4px;
+  padding: 6px 14px;
+  color: #72767d;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  align-self: flex-start;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+  &:hover {
+    border-color: #5865f2;
+    color: #5865f2;
+  }
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+.env-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #2f3136;
+}
+
+.env-btn-cancel,
+.env-btn-save {
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+}
+
+.env-btn-cancel {
+  background: transparent;
+  color: #72767d;
+  border: 1px solid #40444b;
+  &:hover { color: #dcddde; border-color: #72767d; }
+}
+
+.env-btn-save {
+  background: #5865f2;
+  color: #ffffff;
+  &:hover { background: #4752c4; }
+}

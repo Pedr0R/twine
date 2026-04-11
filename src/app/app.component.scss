@@ -976,8 +976,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-info-banner {
@@ -1105,7 +1112,9 @@
     color: #fff;
     border-color: var(--interactive-muted);
 
-    mat-icon { color: #fff; }
+    mat-icon {
+      color: #fff;
+    }
   }
 }
 
@@ -1129,7 +1138,9 @@
     margin-bottom: 8px;
   }
 
-  p { margin: 0; }
+  p {
+    margin: 0;
+  }
 }
 
 /* Collection folder */
@@ -1206,5 +1217,210 @@
     color: #faa61a;
     border-color: #faa61a;
     background-color: rgba(250, 166, 26, 0.08);
+  }
+}
+
+/* ==================================
+   Environment Variables
+   ================================== */
+
+/* Badge on the server-bar env icon */
+.server-icon.env-icon {
+  position: relative;
+}
+
+.env-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #43b581;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Resolved URL preview bar (below the URL input row) */
+.resolved-url-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px 6px 16px;
+  animation: fadeSlideDown 0.2s ease;
+
+  .resolved-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: #43b581;
+    flex-shrink: 0;
+  }
+
+  .resolved-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: #72767d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* Highlight resolved segments green */
+    color: #43b581;
+  }
+}
+
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================================
+   URL Token Highlight Backdrop
+   ================================== */
+
+.url-highlight-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* Backdrop sits behind the input, renders HTML with colored token spans */
+.url-highlight-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Must exactly match .main-url-input */
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid transparent;
+  /* match input border so text aligns */
+  border-radius: 6px;
+  /* Regular text invisible — only the token spans show color */
+  color: transparent;
+  box-sizing: border-box;
+}
+
+/* The actual input sits on top, transparent background */
+.main-url-input {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  width: 100%;
+}
+
+/* Colored token spans rendered inside the backdrop */
+.env-token {
+  border-radius: 3px;
+  padding: 1px 2px;
+
+  &.resolved {
+    color: #f0a500;
+    background: rgba(240, 165, 0, 0.18);
+  }
+
+  &.unresolved {
+    color: #ed4245;
+    background: rgba(237, 66, 69, 0.18);
+    text-decoration: underline wavy #ed4245;
+  }
+}
+
+/* ==================================
+   Token Hover Tooltip
+   ================================== */
+
+.env-token-tooltip {
+  position: fixed;
+  z-index: 9999;
+  transform: translateX(-50%);
+  pointer-events: none;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: #111214;
+  border: 1px solid #3a3d44;
+  border-radius: 6px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  animation: tooltipFadeIn 0.12s ease;
+
+  /* Arrow pointing down */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #3a3d44;
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltip-key {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f0a500;
+}
+
+.tooltip-sep-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #72767d;
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #dcddde;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.not-defined {
+    color: #ed4245;
+    font-style: italic;
   }
 }

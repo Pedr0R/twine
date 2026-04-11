@@ -6,16 +6,18 @@
       <img src="assets/twine-logo.png" alt="Logo">
     </div>
     <div class="server-separator"></div>
-    <div class="server-icon home-icon" [class.active]="sidebarView === 'requests'"
-         title="Requests" (click)="sidebarView = 'requests'">
+    <div class="server-icon home-icon" [class.active]="sidebarView === 'requests'" title="Requests"
+      (click)="sidebarView = 'requests'">
       <mat-icon>code</mat-icon>
     </div>
-    <div class="server-icon" [class.active]="sidebarView === 'collections'"
-         title="Collections" (click)="sidebarView = 'collections'">
+    <div class="server-icon" [class.active]="sidebarView === 'collections'" title="Collections"
+      (click)="sidebarView = 'collections'">
       <mat-icon>folder</mat-icon>
     </div>
-    <div class="server-icon" title="Settings (Coming Soon)">
-      <mat-icon>settings</mat-icon>
+    <div class="server-icon env-icon" (click)="openEnvDialog()"
+      [title]="envVarsCount > 0 ? 'Environment (' + envVarsCount + ' vars)' : 'Environment Variables'">
+      <mat-icon>data_object</mat-icon>
+      <span *ngIf="envVarsCount > 0" class="env-badge">{{envVarsCount}}</span>
     </div>
     <div class="server-icon user-icon" title="User (Coming Soon)">
       <mat-icon>person</mat-icon>
@@ -94,8 +96,7 @@
           <mat-icon>upload_file</mat-icon> Import
         </button>
         <!-- Hidden file input for import -->
-        <input #importFileInput type="file" accept=".json" style="display:none"
-               (change)="onImportFileSelected($event)">
+        <input #importFileInput type="file" accept=".json" style="display:none" (change)="onImportFileSelected($event)">
       </div>
 
       <div class="channels-scroller">
@@ -109,9 +110,8 @@
         <!-- Collection folders -->
         <div *ngFor="let col of collections" class="collection-folder">
           <!-- Folder header -->
-          <div class="col-header channel-category with-action"
-               (click)="toggleCollection(col.id)"
-               (contextmenu)="openCollectionContextMenu($event, col)">
+          <div class="col-header channel-category with-action" (click)="toggleCollection(col.id)"
+            (contextmenu)="openCollectionContextMenu($event, col)">
             <div class="category-header-wrap">
               <mat-icon class="arrow" [class.collapsed]="isCollectionCollapsed(col.id)">expand_more</mat-icon>
               <mat-icon class="folder-icon">folder</mat-icon>
@@ -122,11 +122,9 @@
 
           <!-- Requests inside folder -->
           <ng-container *ngIf="!isCollectionCollapsed(col.id)">
-            <div *ngFor="let req of col.requests"
-                 class="channel-item col-request-item"
-                 [class.active]="req.id === selectedItem"
-                 (click)="loadCollectionRequest(req)"
-                 (contextmenu)="openColReqContextMenu($event, col, req)">
+            <div *ngFor="let req of col.requests" class="channel-item col-request-item"
+              [class.active]="req.id === selectedItem" (click)="loadCollectionRequest(req)"
+              (contextmenu)="openColReqContextMenu($event, col, req)">
               <mat-icon class="hash-icon">tag</mat-icon>
               <div class="channel-name" [title]="req.description || req.name">
                 <span class="method-badge method-{{req.config.method.toLowerCase()}}">{{req.config.method}}</span>
@@ -159,11 +157,22 @@
           <option *ngFor="let m of methods" [value]="m">{{m}}</option>
         </select>
 
-        <input type="text" class="discord-input main-url-input"
-          placeholder="Enter request URL (e.g. https://api.example.com)..." [(ngModel)]="url"
-          (ngModelChange)="onUrlChange()" spellcheck="false">
+        <!-- URL input with variable highlight backdrop -->
+        <div class="url-highlight-wrapper">
+          <div class="url-highlight-backdrop" #urlBackdrop [innerHTML]="highlightedUrl" aria-hidden="true">
+          </div>
+          <input type="text" class="discord-input main-url-input" id="urlInputRef"
+            placeholder="Enter request URL — supports &lt;&lt;variables&gt;&gt;..." [(ngModel)]="url"
+            *ngIf="inputActivated === true" (ngModelChange)="onUrlChange()" spellcheck="false" #urlInput
+            (scroll)="onUrlInputScroll()" (blur)="toggleInput()" (mousemove)="onUrlMouseMove($event)"
+            (mouseleave)="onUrlMouseLeave()">
+          <div class="discord-input main-url-input" *ngIf="inputActivated === false" (click)="toggleInput()">
+            {{url || 'Enter request URL — supports &lt;&lt;variables&gt;&gt;...'}}
+          </div>
+        </div>
 
-        <button class="discord-btn-secondary outline save-col-btn" (click)="saveCurrentRequestToCollection()" title="Save to Collection">
+        <button class="discord-btn-secondary outline save-col-btn" (click)="saveCurrentRequestToCollection()"
+          title="Save to Collection">
           <mat-icon>bookmark_add</mat-icon>
         </button>
 
@@ -171,6 +180,22 @@
           <span *ngIf="!isLoading">Send Request</span>
           <span *ngIf="isLoading" class="pulse">Sending...</span>
         </button>
+      </div>
+
+      <!-- Resolved URL preview -->
+      <!-- <div class="resolved-url-bar" *ngIf="urlHasTokens">
+        <mat-icon class="resolved-icon">arrow_forward</mat-icon>
+        <span class="resolved-text">{{ resolvedUrl }}</span>
+      </div> -->
+
+      <!-- Token hover tooltip (fixed position, above everything) -->
+      <div class="env-token-tooltip" *ngIf="tokenTooltip" [style.left.px]="tokenTooltip.x"
+        [style.bottom.px]="tokenTooltip.y">
+        <span class="tooltip-key">&lt;&lt;{{ tokenTooltip.key }}&gt;&gt;</span>
+        <mat-icon class="tooltip-sep-icon">arrow_forward</mat-icon>
+        <span class="tooltip-value" [class.not-defined]="tokenTooltip.value === null">
+          {{ tokenTooltip.value ?? '(not defined)' }}
+        </span>
       </div>
     </header>
 
@@ -186,7 +211,8 @@
 
               <div class="auth-type-row">
                 <label class="auth-label">Auth Type</label>
-                <select class="discord-dropdown auth-dropdown" [(ngModel)]="authType" (ngModelChange)="onAuthTypeChange()">
+                <select class="discord-dropdown auth-dropdown" [(ngModel)]="authType"
+                  (ngModelChange)="onAuthTypeChange()">
                   <option value="none">No Auth</option>
                   <option value="bearer">Bearer Token</option>
                   <option value="basic">Basic Auth</option>
@@ -208,7 +234,8 @@
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Token</label>
-                  <input type="text" class="discord-input auth-input" placeholder="Enter bearer token..." [(ngModel)]="bearerToken">
+                  <input type="text" class="discord-input auth-input" placeholder="Enter bearer token..."
+                    [(ngModel)]="bearerToken">
                 </div>
               </div>
 
@@ -216,15 +243,18 @@
               <div *ngIf="authType === 'basic'" class="auth-section">
                 <div class="auth-info-banner">
                   <mat-icon>info</mat-icon>
-                  <span>Credentials will be Base64-encoded and sent as <code>Authorization: Basic &lt;token&gt;</code></span>
+                  <span>Credentials will be Base64-encoded and sent as
+                    <code>Authorization: Basic &lt;token&gt;</code></span>
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Username</label>
-                  <input type="text" class="discord-input auth-input" placeholder="Enter username..." [(ngModel)]="basicUsername" autocomplete="off">
+                  <input type="text" class="discord-input auth-input" placeholder="Enter username..."
+                    [(ngModel)]="basicUsername" autocomplete="off">
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Password</label>
-                  <input type="password" class="discord-input auth-input" placeholder="Enter password..." [(ngModel)]="basicPassword" autocomplete="off">
+                  <input type="password" class="discord-input auth-input" placeholder="Enter password..."
+                    [(ngModel)]="basicPassword" autocomplete="off">
                 </div>
               </div>
 
@@ -236,11 +266,13 @@
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Key</label>
-                  <input type="text" class="discord-input auth-input" placeholder="e.g. X-API-KEY" [(ngModel)]="apiKeyName">
+                  <input type="text" class="discord-input auth-input" placeholder="e.g. X-API-KEY"
+                    [(ngModel)]="apiKeyName">
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Value</label>
-                  <input type="text" class="discord-input auth-input" placeholder="Enter API key value..." [(ngModel)]="apiKeyValue">
+                  <input type="text" class="discord-input auth-input" placeholder="Enter API key value..."
+                    [(ngModel)]="apiKeyValue">
                 </div>
                 <div class="auth-field-group">
                   <label class="auth-field-label">Add To</label>

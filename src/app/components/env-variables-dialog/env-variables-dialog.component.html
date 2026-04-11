@@ -1,0 +1,72 @@
+<div class="env-dialog">
+
+  <!-- Header -->
+  <div class="env-dialog-header">
+    <div class="env-dialog-title">
+      <mat-icon class="env-title-icon">data_object</mat-icon>
+      <span>Environment Variables</span>
+    </div>
+    <span class="env-hint">Use <code>&lt;&lt;varName&gt;&gt;</code> in URLs, headers, auth and body</span>
+  </div>
+
+  <!-- Table -->
+  <div class="env-table-wrap">
+    <div class="env-table-header">
+      <span class="col-toggle"></span>
+      <span class="col-key">Variable</span>
+      <span class="col-value">Value</span>
+      <span class="col-action"></span>
+    </div>
+
+    <div class="env-table-body">
+      <div *ngFor="let v of variables; let i = index; trackBy: trackByIndex" class="env-row">
+
+        <!-- Toggle -->
+        <div class="col-toggle">
+          <button class="toggle-btn" [class.active]="v.enabled" (click)="v.enabled = !v.enabled"
+                  [title]="v.enabled ? 'Disable variable' : 'Enable variable'">
+            <span class="toggle-dot"></span>
+          </button>
+        </div>
+
+        <!-- Key -->
+        <div class="col-key">
+          <input class="env-input"
+                 placeholder="variableName"
+                 [(ngModel)]="v.key"
+                 spellcheck="false"
+                 [class.disabled]="!v.enabled">
+        </div>
+
+        <!-- Value -->
+        <div class="col-value">
+          <input class="env-input"
+                 placeholder="value"
+                 [(ngModel)]="v.value"
+                 spellcheck="false"
+                 [class.disabled]="!v.enabled">
+        </div>
+
+        <!-- Delete -->
+        <div class="col-action">
+          <button class="row-delete-btn" (click)="removeRow(i)" title="Remove variable">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Add row -->
+    <button class="add-var-btn" (click)="addRow()">
+      <mat-icon>add</mat-icon> Add Variable
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="env-dialog-footer">
+    <button class="env-btn-cancel" (click)="cancel()">Cancel</button>
+    <button class="env-btn-save" (click)="save()">Save</button>
+  </div>
+
+</div>

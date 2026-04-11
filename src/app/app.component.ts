@@ -1,19 +1,21 @@
-import { Component, OnInit, HostListener, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, HostListener, ElementRef, ViewChildren, QueryList, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ViewChild } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { RequestService, HttpRequestConfig, HttpResponse } from './core/services/request.service';
 import { HistoryService, HistoryItem } from './core/services/history.service';
 import { RequisitionService, Requisition } from './core/services/requisition.service';
 import { CollectionService, Collection, CollectionRequest, AuthConfig } from './core/services/collection.service';
+import { EnvironmentService } from './core/services/environment.service';
 import { SaveRequisitionDialogComponent } from './components/save-requisition-dialog/save-requisition-dialog.component';
 import { CollectionDialogComponent } from './components/collection-dialog/collection-dialog.component';
 import { SaveToCollectionDialogComponent, SaveToCollectionDialogResult } from './components/save-to-collection-dialog/save-to-collection-dialog.component';
+import { EnvVariablesDialogComponent } from './components/env-variables-dialog/env-variables-dialog.component';
 
 interface KeyValuePair {
   key: string;
@@ -57,6 +59,7 @@ export class AppComponent implements OnInit {
   isLoading: boolean = false;
   isValidJson: boolean = true;
   isCopied: boolean = false;
+  inputActivated: boolean = false;
 
   // History
   history: HistoryItem[] = [];
@@ -77,6 +80,20 @@ export class AppComponent implements OnInit {
   // Sidebar view: 'requests' | 'collections'
   sidebarView: 'requests' | 'collections' = 'requests';
 
+  // Environment Variables
+  get envVarsCount(): number {
+    return this.envService.getVariables().filter(v => v.enabled && v.key).length;
+  }
+
+  /** Resolved URL preview — only shown when the raw URL contains {{tokens}} */
+  get resolvedUrl(): string {
+    return this.envService.resolve(this.url);
+  }
+
+  get urlHasTokens(): boolean {
+    return this.envService.hasTokens(this.url);
+  }
+
   get currentRequestName(): string {
     const req = this.savedRequests.find(r => r.id === this.selectedItem);
     return req ? req.name : 'new-request';
@@ -94,6 +111,14 @@ export class AppComponent implements OnInit {
   activeContextReq: Requisition | null = null;
 
   @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('urlInput') urlInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('urlBackdrop') urlBackdropRef!: ElementRef<HTMLDivElement>;
+
+  // URL highlight state
+  highlightedUrl: SafeHtml = '';
+  tokenRanges: Array<{ start: number; end: number; key: string; value: string | undefined }> = [];
+  tokenTooltip: { key: string; value: string | null; x: number; y: number } | null = null;
+  private _measureCanvas: HTMLCanvasElement | null = null;
 
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
@@ -121,13 +146,16 @@ export class AppComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private requisitionService: RequisitionService,
-    private collectionService: CollectionService
+    private collectionService: CollectionService,
+    private envService: EnvironmentService,
+    private sanitizer: DomSanitizer
   ) { }
 
   ngOnInit() {
     this.loadHistory();
     this.loadRequisitions();
     this.loadCollections();
+    this.highlightUrl();
   }
 
   loadRequisitions() {
@@ -156,14 +184,15 @@ export class AppComponent implements OnInit {
     } catch {
       // Ignore invalid intermediate URLs
     }
+    this.highlightUrl();
   }
 
   onMethodChange() {
     const req = this.savedRequests.find(r => r.id === this.selectedItem);
     if (req) {
-       req.config.method = this.method;
-       this.requisitionService.updateRequisitionConfig(req.id, req.config);
-       this.loadRequisitions();
+      req.config.method = this.method;
+      this.requisitionService.updateRequisitionConfig(req.id, req.config);
+      this.loadRequisitions();
     }
   }
 
@@ -240,12 +269,127 @@ export class AppComponent implements OnInit {
     }
   }
 
+  // ── URL Token Highlighting ─────────────────────────────────────────────────
+
+  highlightUrl(): void {
+    if (!this.url) {
+      this.highlightedUrl = this.sanitizer.bypassSecurityTrustHtml('');
+      this.tokenRanges = [];
+      return;
+    }
+
+    const vars = this.envService.getVariables().filter(v => v.enabled && v.key);
+    const varMap = new Map(vars.map(v => [v.key, v.value]));
+    const ranges: typeof this.tokenRanges = [];
+
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escAttr = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+
+    let html = '';
+    let last = 0;
+    const regex = /<<([^>]+)>>/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(this.url)) !== null) {
+      html += esc(this.url.slice(last, match.index));
+      const key = match[1];
+      const value = varMap.get(key);
+      const cls = value !== undefined ? 'env-token resolved' : 'env-token unresolved';
+      const displayVal = value !== undefined ? escAttr(value) : '(not defined)';
+      html += `<span class="${cls}" data-value="${displayVal}">&lt;&lt;${esc(key)}&gt;&gt;</span>`;
+      ranges.push({ start: match.index, end: match.index + match[0].length, key, value });
+      last = match.index + match[0].length;
+    }
+    html += esc(this.url.slice(last));
+
+    this.tokenRanges = ranges;
+    this.highlightedUrl = this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  onUrlInputScroll(): void {
+    if (this.urlBackdropRef) {
+      this.urlBackdropRef.nativeElement.scrollLeft = this.urlInputRef.nativeElement.scrollLeft;
+    }
+  }
+
+  onUrlMouseMove(event: MouseEvent): void {
+    if (this.tokenRanges.length === 0) {
+      this.tokenTooltip = null;
+      return;
+    }
+    const input = this.urlInputRef.nativeElement;
+    const rect = input.getBoundingClientRect();
+    const relX = event.clientX - rect.left + input.scrollLeft;
+
+    if (!this._measureCanvas) this._measureCanvas = document.createElement('canvas');
+    const ctx = this._measureCanvas.getContext('2d')!;
+    const style = window.getComputedStyle(input);
+    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const paddingLeft = parseFloat(style.paddingLeft);
+
+    let charIdx = this.url.length;
+    for (let i = 0; i <= this.url.length; i++) {
+      if (ctx.measureText(this.url.slice(0, i)).width + paddingLeft >= relX) {
+        charIdx = i;
+        break;
+      }
+    }
+
+    const token = this.tokenRanges.find(t => charIdx >= t.start && charIdx < t.end);
+    if (token) {
+      this.tokenTooltip = {
+        key: token.key,
+        value: token.value ?? null,
+        x: event.clientX,
+        y: rect.top
+      };
+    } else {
+      this.tokenTooltip = null;
+    }
+  }
+
+  onUrlMouseLeave(): void {
+    this.tokenTooltip = null;
+  }
+
+  toggleInput(): void {
+    if (this.inputActivated === true) {
+      this.inputActivated = false;
+      this.urlInputRef.nativeElement.blur();
+    }
+    else {
+      this.inputActivated = true;
+      setTimeout(() => this.urlInputRef.nativeElement.focus(), 0);
+    }
+
+  }
+
   get isValidUrl(): boolean {
-    return this.url.startsWith('http://') || this.url.startsWith('https://');
+    // const resolved = this.envService.resolve(this.url);
+    // return resolved.startsWith('http://') || resolved.startsWith('https://');
+    return true;
   }
 
   get canSend(): boolean {
     return this.isValidUrl && this.isValidJson && !this.isLoading;
+  }
+
+  openEnvDialog(): void {
+    const dialogRef = this.dialog.open(EnvVariablesDialogComponent, {
+      width: '620px',
+      panelClass: 'dark-dialog-panel',
+      data: { variables: this.envService.getVariables() }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result !== undefined) {
+        this.envService.setVariables(result);
+        const count = result.filter((v: any) => v.enabled && v.key).length;
+        this.snackBar.open(`Environment: ${count} variable(s) saved.`, 'Close', { duration: 2000 });
+        this.highlightUrl(); // refresh highlights with new variable values
+      }
+    });
   }
 
   async sendRequest() {
@@ -265,27 +409,33 @@ export class AppComponent implements OnInit {
     this.response = null;
 
     try {
-      // Build final URL with query params
+      // Build final URL with query params (resolve env vars in params first)
       this.updateUrlFromParams();
-      const finalUrl = this.url;
+      const finalUrl = this.envService.resolve(this.url);
 
-      // Build Headers Map
+      // Build Headers Map (resolve env vars in keys and values)
       const finalHeaders: Record<string, string> = {};
       this.headers.forEach(h => {
         if (h.enabled && h.key) {
-          finalHeaders[h.key] = h.value;
+          finalHeaders[this.envService.resolve(h.key)] = this.envService.resolve(h.value);
         }
       });
 
-      // Inject Auth
-      if (this.authType === 'bearer' && this.bearerToken) {
-        finalHeaders['Authorization'] = `Bearer ${this.bearerToken}`;
-      } else if (this.authType === 'basic' && this.basicUsername) {
-        const encoded = btoa(`${this.basicUsername}:${this.basicPassword}`);
+      // Inject Auth (resolve env vars in all auth fields)
+      const resolvedBearer = this.envService.resolve(this.bearerToken);
+      const resolvedBasicUser = this.envService.resolve(this.basicUsername);
+      const resolvedBasicPass = this.envService.resolve(this.basicPassword);
+      const resolvedApiKeyName = this.envService.resolve(this.apiKeyName);
+      const resolvedApiKeyValue = this.envService.resolve(this.apiKeyValue);
+
+      if (this.authType === 'bearer' && resolvedBearer) {
+        finalHeaders['Authorization'] = `Bearer ${resolvedBearer}`;
+      } else if (this.authType === 'basic' && resolvedBasicUser) {
+        const encoded = btoa(`${resolvedBasicUser}:${resolvedBasicPass}`);
         finalHeaders['Authorization'] = `Basic ${encoded}`;
-      } else if (this.authType === 'api-key' && this.apiKeyName) {
+      } else if (this.authType === 'api-key' && resolvedApiKeyName) {
         if (this.apiKeyAddTo === 'header') {
-          finalHeaders[this.apiKeyName] = this.apiKeyValue;
+          finalHeaders[resolvedApiKeyName] = resolvedApiKeyValue;
         }
         // query param case handled below via queryParams injection
       }
@@ -314,10 +464,10 @@ export class AppComponent implements OnInit {
 
       // Inject API key as query param if needed
       let urlForRequest = finalUrl;
-      if (this.authType === 'api-key' && this.apiKeyAddTo === 'query' && this.apiKeyName) {
+      if (this.authType === 'api-key' && this.apiKeyAddTo === 'query' && resolvedApiKeyName) {
         try {
           const parsedForAuth = new URL(urlForRequest);
-          parsedForAuth.searchParams.set(this.apiKeyName, this.apiKeyValue);
+          parsedForAuth.searchParams.set(resolvedApiKeyName, resolvedApiKeyValue);
           urlForRequest = parsedForAuth.toString();
         } catch { /* ignore */ }
       }
@@ -326,7 +476,9 @@ export class AppComponent implements OnInit {
         method: this.method,
         url: urlForRequest,
         headers: finalHeaders,
-        body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim() ? this.bodyContent : undefined,
+        body: this.bodyType !== 'Form-Data' && ['POST', 'PUT', 'PATCH'].includes(this.method) && this.bodyContent.trim()
+          ? this.envService.resolve(this.bodyContent)
+          : undefined,
         formDataPayload: formDataFinal
       };
 
@@ -348,7 +500,7 @@ export class AppComponent implements OnInit {
 
   createNewRequisition() {
     this.updateUrlFromParams();
-    
+
     const finalHeaders: Record<string, string> = {};
     this.headers.forEach(h => {
       if (h.enabled && h.key) {
@@ -397,7 +549,7 @@ export class AppComponent implements OnInit {
   }
 
   editContextRequisition() {
-    if(!this.activeContextReq) return;
+    if (!this.activeContextReq) return;
     const req = this.activeContextReq;
     const dialogRef = this.dialog.open(SaveRequisitionDialogComponent, {
       width: '450px',
@@ -414,10 +566,10 @@ export class AppComponent implements OnInit {
   }
 
   deleteContextRequisition() {
-    if(!this.activeContextReq) return;
+    if (!this.activeContextReq) return;
     this.requisitionService.deleteRequisition(this.activeContextReq.id);
     if (this.selectedItem === this.activeContextReq.id) {
-        this.selectedItem = '';
+      this.selectedItem = '';
     }
     this.loadRequisitions();
   }
@@ -689,6 +841,7 @@ export class AppComponent implements OnInit {
 
     this.response = null;
     this.validateJson();
+    this.highlightUrl();
   }
 
   getResponseBodyDisplay(): string {
