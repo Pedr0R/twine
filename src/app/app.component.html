@@ -67,7 +67,7 @@
 
         <ng-container *ngIf="!isHistoryCollapsed">
           <div *ngFor="let item of history" class="channel-item" [class.active]="item.id === selectedItem"
-            (click)="loadHistoryItem(item)">
+            (click)="loadHistoryClick(item)">
             <mat-icon class="hash-icon">tag</mat-icon>
             <div class="channel-name" [title]="item.config.url">
               <span class="method-badge method-{{item.config.method.toLowerCase()}}">{{item.config.method}}</span>
@@ -145,6 +145,19 @@
   <!-- 3. Main Chat Area -->
   <main class="chat-area">
 
+    <!-- Tabs Bar -->
+    <div class="tabs-bar">
+      <div *ngFor="let tab of tabs" class="tab-item" [class.active]="tab.id === activeTabId" (click)="selectTab(tab.id)">
+        <span class="tab-method method-{{tab.method.toLowerCase()}}">{{tab.method}}</span>
+        <span class="tab-name" [title]="tab.url || tab.name">{{ tab.name }}</span>
+        <span *ngIf="tab.isDirty" class="tab-dirty-dot" title="Unsaved changes"></span>
+        <mat-icon class="tab-close" (click)="closeTab(tab.id, $event)">close</mat-icon>
+      </div>
+      <button class="add-tab-btn" (click)="addNewTab()" title="New Tab">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+
     <!-- Top Nav / Request Control -->
     <header class="chat-header">
       <div class="header-title">
@@ -163,6 +176,19 @@
           (urlChange)="onUrlChange()"
           (send)="sendRequest()">
         </app-url-bar>
+
+        <!-- Environment Selector -->
+        <div class="env-selector-wrap">
+          <select class="discord-dropdown env-dropdown" [(ngModel)]="activeProfileId" (ngModelChange)="onProfileChange()" title="Select Active Environment">
+            <option *ngFor="let p of envProfiles" [value]="p.id">{{p.name}}</option>
+          </select>
+          <button class="env-action-btn" (click)="openCreateEnvDialog()" title="Create New Environment">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button class="env-action-btn delete-btn" *ngIf="activeProfileId !== 'global'" (click)="deleteActiveEnv()" title="Delete Current Environment">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
 
         <button class="discord-btn-secondary outline save-col-btn" (click)="saveCurrentRequestToCollection()"
           title="Save to Collection">
@@ -309,9 +335,21 @@
               </div>
 
               <!-- JSON/Text Editor -->
-              <textarea *ngIf="bodyType !== 'Form-Data'" class="discord-input code-editor"
-                [class.invalid-json]="!isValidJson" [(ngModel)]="bodyContent" (input)="validateJson()"
-                spellcheck="false"></textarea>
+              <div *ngIf="bodyType !== 'Form-Data'" class="code-editor-container" [class.invalid-json]="!isValidJson">
+                <pre class="code-highlight-overlay" [innerHTML]="highlightedBody" #highlightOverlay></pre>
+                <textarea
+                  class="code-textarea"
+                  [(ngModel)]="bodyContent"
+                  (ngModelChange)="validateJson()"
+                  (scroll)="syncScroll(textareaEl, highlightOverlay)"
+                  placeholder="{\n  &quot;key&quot;: &quot;value&quot;\n}"
+                  #textareaEl
+                  spellcheck="false">
+                </textarea>
+                <button *ngIf="bodyType === 'JSON'" class="format-json-btn" (click)="formatJson()" title="Format JSON">
+                  <mat-icon>format_align_left</mat-icon> Format
+                </button>
+              </div>
               <div *ngIf="bodyType === 'JSON' && !isValidJson" class="error-text">Syntax Error: Invalid JSON Format
               </div>
 

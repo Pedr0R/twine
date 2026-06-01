@@ -27,12 +27,27 @@ export class RequestService {
     if ((window as any).electronAPI) {
       return await (window as any).electronAPI.sendRequest(config);
     } else {
-      console.error('Electron API not available');
-      return {
-        error: 'Application is not running in Electron.',
-        time: 0,
-        size: 0
-      };
+      console.log('Electron API not available, falling back to local CORS proxy...');
+      try {
+        const response = await fetch('http://localhost:5201/proxy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(config)
+        });
+        if (!response.ok) {
+          throw new Error(`Proxy returned HTTP status ${response.status}`);
+        }
+        return await response.json();
+      } catch (err: any) {
+        console.error('CORS Proxy failed:', err);
+        return {
+          error: `CORS Proxy unavailable (is it running? Run 'npm run proxy'). Details: ${err.message}`,
+          time: 0,
+          size: 0
+        };
+      }
     }
   }
 }

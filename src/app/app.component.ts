@@ -11,8 +11,8 @@ import { RequestService, HttpRequestConfig, HttpResponse } from './core/services
 import { HistoryService, HistoryItem } from './core/services/history.service';
 import { RequisitionService, Requisition } from './core/services/requisition.service';
 import { CollectionService, Collection, CollectionRequest, AuthConfig } from './core/services/collection.service';
-import { EnvironmentService } from './core/services/environment.service';
-import { KeyValuePair } from './core/models/request.models';
+import { EnvironmentService, EnvProfile } from './core/services/environment.service';
+import { KeyValuePair, Tab } from './core/models/request.models';
 import { SaveRequisitionDialogComponent } from './components/save-requisition-dialog/save-requisition-dialog.component';
 import { CollectionDialogComponent } from './components/collection-dialog/collection-dialog.component';
 import { SaveToCollectionDialogComponent, SaveToCollectionDialogResult } from './components/save-to-collection-dialog/save-to-collection-dialog.component';
@@ -31,26 +31,64 @@ import { UrlBarComponent } from './components/url-bar/url-bar.component';
   styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnInit {
-  // Request
-  method: string = 'GET';
+  // Tabs State
+  tabs: Tab[] = [];
+  activeTabId: string = '';
+
   methods: string[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
-  url: string = '';
 
-  headers: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
-  queryParams: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
+  get activeTab(): Tab {
+    return this.tabs.find(t => t.id === this.activeTabId) || this.tabs[0];
+  }
 
-  // Auth
-  authType: string = 'none';
-  bearerToken: string = '';
-  basicUsername: string = '';
-  basicPassword: string = '';
-  apiKeyName: string = '';
-  apiKeyValue: string = '';
-  apiKeyAddTo: string = 'header';
+  // Getters/setters delegating to activeTab
+  get url(): string { return this.activeTab?.url ?? ''; }
+  set url(value: string) { if (this.activeTab) { this.activeTab.url = value; this.activeTab.isDirty = true; } }
 
-  bodyType: string = 'JSON';
-  bodyContent: string = '{\n\n}';
-  formDataFields: KeyValuePair[] = [{ key: '', value: '', enabled: true }];
+  get method(): string { return this.activeTab?.method ?? 'GET'; }
+  set method(value: string) { if (this.activeTab) { this.activeTab.method = value; this.activeTab.isDirty = true; } }
+
+  get headers(): KeyValuePair[] { return this.activeTab?.headers ?? []; }
+  set headers(value: KeyValuePair[]) { if (this.activeTab) { this.activeTab.headers = value; this.activeTab.isDirty = true; } }
+
+  get queryParams(): KeyValuePair[] { return this.activeTab?.queryParams ?? []; }
+  set queryParams(value: KeyValuePair[]) { if (this.activeTab) { this.activeTab.queryParams = value; this.activeTab.isDirty = true; } }
+
+  get authType(): string { return this.activeTab?.authType ?? 'none'; }
+  set authType(value: string) { if (this.activeTab) { this.activeTab.authType = value; this.activeTab.isDirty = true; } }
+
+  get bearerToken(): string { return this.activeTab?.bearerToken ?? ''; }
+  set bearerToken(value: string) { if (this.activeTab) { this.activeTab.bearerToken = value; this.activeTab.isDirty = true; } }
+
+  get basicUsername(): string { return this.activeTab?.basicUsername ?? ''; }
+  set basicUsername(value: string) { if (this.activeTab) { this.activeTab.basicUsername = value; this.activeTab.isDirty = true; } }
+
+  get basicPassword(): string { return this.activeTab?.basicPassword ?? ''; }
+  set basicPassword(value: string) { if (this.activeTab) { this.activeTab.basicPassword = value; this.activeTab.isDirty = true; } }
+
+  get apiKeyName(): string { return this.activeTab?.apiKeyName ?? ''; }
+  set apiKeyName(value: string) { if (this.activeTab) { this.activeTab.apiKeyName = value; this.activeTab.isDirty = true; } }
+
+  get apiKeyValue(): string { return this.activeTab?.apiKeyValue ?? ''; }
+  set apiKeyValue(value: string) { if (this.activeTab) { this.activeTab.apiKeyValue = value; this.activeTab.isDirty = true; } }
+
+  get apiKeyAddTo(): string { return this.activeTab?.apiKeyAddTo ?? 'header'; }
+  set apiKeyAddTo(value: string) { if (this.activeTab) { this.activeTab.apiKeyAddTo = value; this.activeTab.isDirty = true; } }
+
+  get bodyType(): string { return this.activeTab?.bodyType ?? 'JSON'; }
+  set bodyType(value: string) { if (this.activeTab) { this.activeTab.bodyType = value; this.activeTab.isDirty = true; } }
+
+  get bodyContent(): string { return this.activeTab?.bodyContent ?? '{\n\n}'; }
+  set bodyContent(value: string) { if (this.activeTab) { this.activeTab.bodyContent = value; this.activeTab.isDirty = true; } }
+
+  get formDataFields(): KeyValuePair[] { return this.activeTab?.formDataFields ?? []; }
+  set formDataFields(value: KeyValuePair[]) { if (this.activeTab) { this.activeTab.formDataFields = value; this.activeTab.isDirty = true; } }
+
+  get response(): HttpResponse | null { return this.activeTab?.response ?? null; }
+  set response(value: HttpResponse | null) { if (this.activeTab) { this.activeTab.response = value; } }
+
+  get selectedItem(): string { return this.activeTab?.selectedItem ?? ''; }
+  set selectedItem(value: string) { if (this.activeTab) { this.activeTab.selectedItem = value; } }
 
   // State
   isLoading: boolean = false;
@@ -70,19 +108,53 @@ export class AppComponent implements OnInit {
   activeContextCollection: Collection | null = null;
   activeContextColReq: { collection: Collection; request: CollectionRequest } | null = null;
 
-  // Response
-  response: HttpResponse | null = null;
-  selectedItem: string = '';
-
   // Sidebar view: 'requests' | 'collections'
   sidebarView: 'requests' | 'collections' = 'requests';
 
   // Environment Variables
+  get envProfiles(): EnvProfile[] {
+    return this.envService.getProfiles();
+  }
+
+  get activeProfileId(): string {
+    return this.envService.getActiveProfileId();
+  }
+
+  set activeProfileId(id: string) {
+    this.envService.setActiveProfileId(id);
+  }
+
   get envVarsCount(): number {
     return this.envService.getVariables().filter(v => v.enabled && v.key).length;
   }
 
+  onProfileChange() {
+    // Reload state if needed
+  }
+
+  openCreateEnvDialog() {
+    const name = window.prompt('Enter new environment name:');
+    if (name && name.trim()) {
+      this.envService.createProfile(name.trim());
+      this.snackBar.open(`Environment "${name}" created.`, 'Close', { duration: 2500 });
+    }
+  }
+
+  deleteActiveEnv() {
+    const activeId = this.envService.getActiveProfileId();
+    if (activeId === 'global') return;
+    
+    const activeProfile = this.envService.getProfiles().find(p => p.id === activeId);
+    if (!activeProfile) return;
+
+    if (window.confirm(`Are you sure you want to delete environment "${activeProfile.name}"?`)) {
+      this.envService.deleteProfile(activeId);
+      this.snackBar.open(`Environment deleted.`, 'Close', { duration: 2500 });
+    }
+  }
+
   get currentRequestName(): string {
+    if (this.activeTab?.name) return this.activeTab.name;
     const req = this.savedRequests.find(r => r.id === this.selectedItem);
     return req ? req.name : 'new-request';
   }
@@ -120,6 +192,11 @@ export class AppComponent implements OnInit {
     event.preventDefault();
   }
 
+  @HostListener('window:beforeunload')
+  unloadNotification() {
+    this.saveTabsState();
+  }
+
   constructor(
     private reqService: RequestService,
     private historyService: HistoryService,
@@ -132,9 +209,103 @@ export class AppComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.initTabs();
     this.loadHistory();
     this.loadRequisitions();
     this.loadCollections();
+  }
+
+  initTabs() {
+    const saved = localStorage.getItem('twine_active_tabs_v1');
+    const activeId = localStorage.getItem('twine_active_tab_id_v1');
+    if (saved) {
+      try {
+        this.tabs = JSON.parse(saved);
+        this.activeTabId = activeId || this.tabs[0]?.id;
+      } catch {
+        this.tabs = [];
+      }
+    }
+    if (this.tabs.length === 0) {
+      this.addNewTab();
+    }
+  }
+
+  addNewTab(name: string = 'new-request', config?: HttpRequestConfig, selectedItem: string = '') {
+    const id = 'tab_' + Math.random().toString(36).substr(2, 9);
+    const newTab: Tab = {
+      id,
+      name,
+      method: config?.method || 'GET',
+      url: config?.url || '',
+      headers: config?.headers ? Object.entries(config.headers).map(([key, value]) => ({ key, value, enabled: true })) : [{ key: '', value: '', enabled: true }],
+      queryParams: [{ key: '', value: '', enabled: true }],
+      authType: 'none',
+      bearerToken: '',
+      basicUsername: '',
+      basicPassword: '',
+      apiKeyName: '',
+      apiKeyValue: '',
+      apiKeyAddTo: 'header',
+      bodyType: 'JSON',
+      bodyContent: '{\n\n}',
+      formDataFields: [{ key: '', value: '', enabled: true }],
+      response: null,
+      selectedItem,
+      isDirty: false
+    };
+
+    // Parse query params if url contains them
+    if (config?.url) {
+      try {
+        const u = new URL(config.url);
+        newTab.url = u.origin + u.pathname;
+        const params: KeyValuePair[] = [];
+        u.searchParams.forEach((value, key) => {
+          params.push({ key, value, enabled: true });
+        });
+        if (params.length > 0) {
+          newTab.queryParams = params;
+        }
+      } catch {
+        // use url as-is
+      }
+    }
+
+    this.tabs.push(newTab);
+    this.activeTabId = id;
+    this.saveTabsState();
+  }
+
+  selectTab(id: string) {
+    this.activeTabId = id;
+    this.saveTabsState();
+  }
+
+  closeTab(id: string, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    const index = this.tabs.findIndex(t => t.id === id);
+    if (index === -1) return;
+
+    this.tabs.splice(index, 1);
+
+    if (this.tabs.length === 0) {
+      this.addNewTab();
+    } else if (this.activeTabId === id) {
+      const nextActiveIndex = Math.min(index, this.tabs.length - 1);
+      this.activeTabId = this.tabs[nextActiveIndex].id;
+    }
+
+    this.saveTabsState();
+  }
+
+  saveTabsState() {
+    localStorage.setItem('twine_active_tabs_v1', JSON.stringify(this.tabs));
+    localStorage.setItem('twine_active_tab_id_v1', this.activeTabId);
   }
 
   loadRequisitions() {
@@ -244,6 +415,61 @@ export class AppComponent implements OnInit {
       }
     } else {
       this.isValidJson = true;
+    }
+  }
+
+  get highlightedBody(): SafeHtml {
+    const raw = this.bodyContent || '';
+    if (this.bodyType === 'JSON') {
+      return this.sanitizer.bypassSecurityTrustHtml(this.highlightJSON(raw));
+    }
+    return this.sanitizer.bypassSecurityTrustHtml(
+      raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    );
+  }
+
+  highlightJSON(json: string): string {
+    if (!json) return '';
+    let escaped = json
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+      
+    return escaped.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let cls = 'json-value';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        } else {
+          cls = 'json-number';
+        }
+        return `<span class="hl-${cls}">${match}</span>`;
+      }
+    );
+  }
+
+  syncScroll(textarea: HTMLTextAreaElement, overlay: HTMLPreElement) {
+    overlay.scrollTop = textarea.scrollTop;
+    overlay.scrollLeft = textarea.scrollLeft;
+  }
+
+  formatJson() {
+    if (this.bodyType !== 'JSON' || !this.bodyContent.trim()) return;
+    try {
+      const parsed = JSON.parse(this.bodyContent);
+      this.bodyContent = JSON.stringify(parsed, null, 2);
+      this.validateJson();
+    } catch (e) {
+      this.snackBar.open('Cannot format: invalid JSON syntax.', 'Close', { duration: 2000 });
     }
   }
 
@@ -465,9 +691,20 @@ export class AppComponent implements OnInit {
   }
 
   loadRequisition(req: Requisition) {
-    const mockHistoryItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
-    this.loadHistoryItem(mockHistoryItem);
-    this.selectedItem = req.id;
+    const existingTab = this.tabs.find(t => t.selectedItem === req.id);
+    if (existingTab) {
+      this.selectTab(existingTab.id);
+    } else {
+      this.addNewTab(req.name);
+      const mockHistoryItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
+      this.loadHistoryItem(mockHistoryItem);
+      this.selectedItem = req.id;
+      if (this.activeTab) {
+        this.activeTab.name = req.name;
+        this.activeTab.isDirty = false;
+      }
+      this.saveTabsState();
+    }
   }
 
   // ── Collections ──────────────────────────────────────────────────────────
@@ -554,6 +791,10 @@ export class AppComponent implements OnInit {
     const historyItem: HistoryItem = { id: req.id, config: req.config, timestamp: req.timestamp };
     this.loadHistoryItem(historyItem);
     this.selectedItem = req.id;
+    if (this.activeTab) {
+      this.activeTab.name = req.name;
+      this.activeTab.isDirty = false;
+    }
 
     // Restore auth state from collection request
     const auth = req.auth;
@@ -659,9 +900,30 @@ export class AppComponent implements OnInit {
     reader.readAsText(file);
   }
 
+  loadHistoryClick(item: HistoryItem) {
+    const existingTab = this.tabs.find(t => t.selectedItem === item.id);
+    if (existingTab) {
+      this.selectTab(existingTab.id);
+    } else {
+      this.addNewTab(item.config.url || 'Request');
+      this.loadHistoryItem(item);
+      this.selectedItem = item.id;
+      this.saveTabsState();
+    }
+  }
+
   loadHistoryItem(item: HistoryItem) {
     this.method = item.config.method;
     this.selectedItem = item.id;
+
+    if (this.activeTab) {
+      try {
+        const u = new URL(item.config.url);
+        this.activeTab.name = u.pathname !== '/' ? u.pathname : u.host;
+      } catch {
+        this.activeTab.name = item.config.url || 'Request';
+      }
+    }
 
     // Strip query parameters back to pure URL
     try {
