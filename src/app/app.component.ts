@@ -232,7 +232,6 @@ export class AppComponent implements OnInit {
   }
 
   addNewTab(name: string = 'new-request', config?: HttpRequestConfig, selectedItem: string = '') {
-    console.log('teste')
     const id = 'tab_' + Math.random().toString(36).substr(2, 9);
     const newTab: Tab = {
       id,
