@@ -254,7 +254,8 @@ export class AppComponent implements OnInit {
       selectedItem,
       isDirty: false
     };
-
+    console.log(newTab);
+    
     // Parse query params if url contains them
     if (config?.url) {
       try {
